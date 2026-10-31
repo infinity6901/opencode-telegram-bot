@@ -7,6 +7,7 @@ import {
   toDataUri,
   isTextMimeType,
   isFileSizeAllowed,
+  MAX_FILE_SIZE_BYTES,
 } from "../../app/services/file-download-service.js";
 import { isDocExtractorConfigured, extractDocument } from "../../app/services/document-extractor-service.js";
 import { getModelCapabilities, supportsInput } from "../../app/services/model-capabilities-service.js";
@@ -255,8 +256,34 @@ export async function handleDocumentMessage(
       return;
     }
 
-    logger.warn(`[Document] Unsupported document MIME type: ${mimeType}, filename=${filename}`);
-    await ctx.reply(t("bot.file_type_unsupported"));
+    const genericMimeType = mimeType || GENERIC_MIME_TYPE;
+
+    if (!isFileSizeAllowed(doc.file_size, MAX_FILE_SIZE_BYTES / 1024)) {
+      logger.warn(
+        `[Document] File too large: ${filename} (${doc.file_size} bytes > ${MAX_FILE_SIZE_BYTES} bytes)`,
+      );
+      await ctx.reply(t("bot.file_too_large", { maxSizeMb: "20" }));
+      return;
+    }
+
+    await ctx.reply(t("bot.file_downloading"));
+    if (await rejectQueuedMediaBeforePreparation(ctx, doc.file_size)) {
+      return;
+    }
+    const downloadedFile = await downloadFile(ctx.api, doc.file_id);
+
+    const filePart: FilePartInput = {
+      type: "file",
+      mime: genericMimeType,
+      filename: filename,
+      url: toDataUri(downloadedFile.buffer, genericMimeType),
+    };
+
+    logger.info(
+      `[Document] Sending file (${downloadedFile.buffer.length} bytes, ${filename}, ${genericMimeType}) with prompt`,
+    );
+
+    await submitPrompt(caption, [filePart], doc.file_size);
   } catch (err) {
     logger.error("[Document] Error handling document message:", err);
     await ctx.reply(t("bot.file_download_error"));

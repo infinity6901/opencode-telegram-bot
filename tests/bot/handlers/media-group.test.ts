@@ -366,7 +366,7 @@ describe("bot/handlers/media-group", () => {
     );
   });
 
-  it("rejects the whole media group when any file is unsupported", async () => {
+  it("sends archives and other non-media files together with the group", async () => {
     const image = createDocumentContext({
       messageId: 50,
       fileId: "image-file",
@@ -386,9 +386,22 @@ describe("bot/handlers/media-group", () => {
     await addToHandler(handler, archive.ctx);
     await handler.flushAll();
 
-    expect(image.replyMock).toHaveBeenCalledWith(t("bot.media_group_not_processed"));
-    expect(downloadMock).not.toHaveBeenCalled();
-    expect(processPromptMock).not.toHaveBeenCalled();
+    expect(image.replyMock).not.toHaveBeenCalledWith(t("bot.media_group_not_processed"));
+    expect(downloadMock).toHaveBeenCalledTimes(2);
+    expect(processPromptMock).toHaveBeenCalledWith(
+      image.ctx,
+      "",
+      deps,
+      expect.arrayContaining([
+        expect.objectContaining({ type: "file", mime: "image/png", filename: "screen.png" }),
+        expect.objectContaining({
+          type: "file",
+          mime: "application/zip",
+          filename: "archive.zip",
+          url: expect.stringMatching(/^data:application\/zip;base64,/),
+        }),
+      ]),
+    );
   });
 
   it("rejects the whole media group when the model lacks image support", async () => {

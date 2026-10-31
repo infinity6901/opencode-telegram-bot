@@ -474,7 +474,7 @@ describe("bot/handlers/document", () => {
       },
     );
 
-    it("rejects octet-stream files without an image extension", async () => {
+    it("sends octet-stream files without an image extension as generic files", async () => {
       const { ctx, replyMock } = createDocumentContext({
         document: {
           file_id: "bin-file-id",
@@ -488,9 +488,16 @@ describe("bot/handlers/document", () => {
 
       await handleDocumentMessage(ctx, deps);
 
-      expect(replyMock).toHaveBeenCalledWith(t("bot.file_type_unsupported"));
-      expect(downloadMock).not.toHaveBeenCalled();
-      expect(processPromptMock).not.toHaveBeenCalled();
+      expect(replyMock).toHaveBeenCalledWith(t("bot.file_downloading"));
+      expect(downloadMock).toHaveBeenCalled();
+      expect(processPromptMock).toHaveBeenCalledWith(ctx, "", deps, [
+        expect.objectContaining({
+          type: "file",
+          mime: "application/octet-stream",
+          filename: "firmware.bin",
+          url: expect.stringMatching(/^data:application\/octet-stream;base64,/),
+        }),
+      ]);
     });
 
     it("routes a PDF named with an image extension by its PDF MIME type", async () => {
@@ -674,8 +681,8 @@ describe("bot/handlers/document", () => {
     });
   });
 
-  describe("unsupported file types", () => {
-    it("shows error for unsupported MIME types", async () => {
+  describe("generic file types", () => {
+    it("sends archives and other non-media files as attachments", async () => {
       const { ctx, replyMock } = createDocumentContext({
         document: {
           file_id: "zip-file-id",
@@ -684,12 +691,61 @@ describe("bot/handlers/document", () => {
           mime_type: "application/zip",
           file_size: 5000,
         },
+        caption: "Unpack this",
       });
       const { deps, processPromptMock, downloadMock } = createDocumentDeps();
 
       await handleDocumentMessage(ctx, deps);
 
-      expect(replyMock).toHaveBeenCalledWith(t("bot.file_type_unsupported"));
+      expect(replyMock).toHaveBeenCalledWith(t("bot.file_downloading"));
+      expect(downloadMock).toHaveBeenCalled();
+      expect(processPromptMock).toHaveBeenCalledWith(ctx, "Unpack this", deps, [
+        expect.objectContaining({
+          type: "file",
+          mime: "application/zip",
+          filename: "archive.zip",
+          url: expect.stringMatching(/^data:application\/zip;base64,/),
+        }),
+      ]);
+    });
+
+    it("falls back to application/octet-stream when the MIME type is missing", async () => {
+      const { ctx } = createDocumentContext({
+        document: {
+          file_id: "unknown-file-id",
+          file_unique_id: "unknown-unique-id",
+          file_name: "data.bin",
+          file_size: 5000,
+        },
+      });
+      const { deps, processPromptMock } = createDocumentDeps();
+
+      await handleDocumentMessage(ctx, deps);
+
+      expect(processPromptMock).toHaveBeenCalledWith(ctx, "", deps, [
+        expect.objectContaining({
+          type: "file",
+          mime: "application/octet-stream",
+          filename: "data.bin",
+        }),
+      ]);
+    });
+
+    it("rejects generic files above the Telegram download limit", async () => {
+      const { ctx, replyMock } = createDocumentContext({
+        document: {
+          file_id: "huge-file-id",
+          file_unique_id: "huge-unique-id",
+          file_name: "huge.zip",
+          mime_type: "application/zip",
+          file_size: 20 * 1024 * 1024 + 1,
+        },
+      });
+      const { deps, processPromptMock, downloadMock } = createDocumentDeps();
+
+      await handleDocumentMessage(ctx, deps);
+
+      expect(replyMock).toHaveBeenCalledWith(t("bot.file_too_large", { maxSizeMb: "20" }));
       expect(downloadMock).not.toHaveBeenCalled();
       expect(processPromptMock).not.toHaveBeenCalled();
     });

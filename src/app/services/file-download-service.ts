@@ -5,7 +5,7 @@ import { config } from "../../config.js";
 import { logger } from "../../utils/logger.js";
 import { withTelegramRateLimitRetry } from "../../utils/telegram-rate-limit-retry.js";
 
-const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
+export const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
 const DEFAULT_TELEGRAM_API_ROOT = "https://api.telegram.org";
 
 export interface DownloadedFile {

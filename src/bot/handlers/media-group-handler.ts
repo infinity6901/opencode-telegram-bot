@@ -9,6 +9,7 @@ import {
   downloadTelegramFile,
   isFileSizeAllowed,
   isTextMimeType,
+  MAX_FILE_SIZE_BYTES,
   toDataUri,
 } from "../../app/services/file-download-service.js";
 import { processUserPrompt, type ProcessPromptDeps } from "./prompt.js";
@@ -351,7 +352,18 @@ export class MediaGroupAttachmentHandler {
         continue;
       }
 
-      return { reason: `unsupported_document_mime:${mimeType || "unknown"}` };
+      if (!isFileSizeAllowed(document.file_size, MAX_FILE_SIZE_BYTES / 1024)) {
+        return { reason: "file_too_large" };
+      }
+
+      validItems.push({
+        kind: "file",
+        ctx: item.ctx,
+        messageId: item.messageId,
+        fileId: document.file_id,
+        mime: mimeType || "application/octet-stream",
+        filename,
+      });
     }
 
     if (needsImageSupport || needsPdfSupport) {
