@@ -129,6 +129,7 @@ export const fr: I18nDictionary = {
   "bot.files_downloading": "⏳ Téléchargement des fichiers...",
   "bot.file_too_large": "⚠️ Le fichier est trop volumineux (max {maxSizeMb}MB)",
   "bot.file_download_error": "🔴 Impossible de télécharger le fichier",
+  "bot.file_save_error": "🔴 Impossible d'enregistrer le fichier dans le projet",
   "bot.file_type_unsupported":
     "⚠️ Ce type de fichier n'est pas pris en charge. Envoyez une image, un document (PDF, DOCX, PPTX) ou un fichier texte/code.",
   "bot.rich_message_media_skipped":

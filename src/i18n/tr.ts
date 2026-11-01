@@ -124,6 +124,7 @@ export const tr: I18nDictionary = {
   "bot.files_downloading": "⏳ Dosyalar indiriliyor...",
   "bot.file_too_large": "⚠️ Dosya çok büyük (en fazla {maxSizeMb}MB)",
   "bot.file_download_error": "🔴 Dosya indirilemedi",
+  "bot.file_save_error": "🔴 Dosya projeye kaydedilemedi",
   "bot.file_type_unsupported":
     "⚠️ Bu dosya türü desteklenmiyor. Bir görsel, belge (PDF, DOCX, PPTX) veya metin/kod dosyası gönderin.",
   "bot.rich_message_media_skipped": "⚠️ Desteklenmeyen {count} medya parçası atlandı.",

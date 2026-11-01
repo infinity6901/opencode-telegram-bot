@@ -112,6 +112,7 @@ export const zh: I18nDictionary = {
   "bot.files_downloading": "⏳ 正在下载文件...",
   "bot.file_too_large": "⚠️ 文件过大（最大 {maxSizeMb}MB）",
   "bot.file_download_error": "🔴 下载文件失败",
+  "bot.file_save_error": "🔴 无法将文件保存到项目",
   "bot.file_type_unsupported":
     "⚠️ 不支持此文件类型。请发送图片、文档（PDF、DOCX、PPTX）或文本/代码文件。",
   "bot.rich_message_media_skipped": "⚠️ 已跳过 {count} 个不受支持的媒体部分。",

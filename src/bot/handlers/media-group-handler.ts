@@ -12,6 +12,12 @@ import {
   MAX_FILE_SIZE_BYTES,
   toDataUri,
 } from "../../app/services/file-download-service.js";
+import {
+  saveUploadedFileToProject,
+  type SavedUpload,
+} from "../../app/services/upload-storage-service.js";
+import { getCurrentProject } from "../../app/stores/settings-store.js";
+import type { ProjectInfo } from "../../app/types/project.js";
 import { processUserPrompt, type ProcessPromptDeps } from "./prompt.js";
 import type { ArrivalTicket } from "../../app/managers/prompt-handover-manager.js";
 import { createIncomingPrompt, type IncomingPrompt } from "../../app/types/prompt.js";
@@ -60,6 +66,12 @@ type ValidMediaGroupItem =
       ctx: Context;
       fileId: string;
       filename: string;
+    }
+  | {
+      kind: "workspace-file";
+      ctx: Context;
+      fileId: string;
+      filename: string;
     };
 
 interface MediaGroupBatch {
@@ -87,6 +99,12 @@ export interface MediaGroupHandlerDeps extends ProcessPromptDeps {
     modelId: string,
   ) => Promise<Model["capabilities"] | null>;
   getStoredModel?: () => { providerID: string; modelID: string };
+  getCurrentProject?: () => ProjectInfo | undefined;
+  saveUploadedFile?: (
+    worktree: string,
+    filename: string,
+    buffer: Buffer,
+  ) => Promise<SavedUpload>;
   processPrompt?: (
     ctx: Context,
     input: IncomingPrompt,
@@ -229,6 +247,16 @@ export class MediaGroupAttachmentHandler {
         return;
       }
 
+      let worktree: string | undefined;
+      if (validationResult.items.some((item) => item.kind === "workspace-file")) {
+        const currentProject = (this.deps.getCurrentProject ?? getCurrentProject)();
+        if (!currentProject) {
+          await replyCtx.reply(t("bot.project_not_selected"));
+          return;
+        }
+        worktree = currentProject.worktree;
+      }
+
       const mediaBytes = items.reduce<number | undefined>((total, item) => {
         if (total === undefined) {
           return undefined;
@@ -247,7 +275,11 @@ export class MediaGroupAttachmentHandler {
       }
       await replyCtx.reply(t("bot.files_downloading"));
 
-      const { promptText, fileParts } = await this.preparePrompt(validationResult.items, items);
+      const { promptText, fileParts } = await this.preparePrompt(
+        validationResult.items,
+        items,
+        worktree,
+      );
       const processPrompt = this.deps.processPrompt ?? processUserPrompt;
 
       logger.info(
@@ -357,11 +389,9 @@ export class MediaGroupAttachmentHandler {
       }
 
       validItems.push({
-        kind: "file",
+        kind: "workspace-file",
         ctx: item.ctx,
-        messageId: item.messageId,
         fileId: document.file_id,
-        mime: mimeType || "application/octet-stream",
         filename,
       });
     }
@@ -385,8 +415,10 @@ export class MediaGroupAttachmentHandler {
   private async preparePrompt(
     validItems: ValidMediaGroupItem[],
     originalItems: PendingMediaGroupItem[],
+    worktree: string | undefined,
   ): Promise<{ promptText: string; fileParts: FilePartInput[] }> {
     const downloadFile = this.deps.downloadFile ?? downloadTelegramFile;
+    const saveUploadedFile = this.deps.saveUploadedFile ?? saveUploadedFileToProject;
     const textSections: string[] = [];
     const fileParts: FilePartInput[] = [];
 
@@ -397,6 +429,17 @@ export class MediaGroupAttachmentHandler {
         const textContent = downloadedFile.buffer.toString("utf-8");
         textSections.push(
           `--- Content of ${item.filename} ---\n${textContent}\n--- End of file ---`,
+        );
+        continue;
+      }
+
+      if (item.kind === "workspace-file") {
+        if (!worktree) {
+          throw new Error("Missing project worktree for uploaded file");
+        }
+        const saved = await saveUploadedFile(worktree, item.filename, downloadedFile.buffer);
+        textSections.push(
+          `The user uploaded a file and it was saved to the project at: ${saved.relativePath}`,
         );
         continue;
       }

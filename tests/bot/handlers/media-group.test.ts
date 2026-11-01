@@ -110,6 +110,8 @@ function createDeps(overrides: Partial<MediaGroupHandlerDeps> = {}): {
   processPromptMock: ReturnType<typeof vi.fn>;
   downloadMock: ReturnType<typeof vi.fn>;
   getCapabilitiesMock: ReturnType<typeof vi.fn>;
+  getCurrentProjectMock: ReturnType<typeof vi.fn>;
+  saveUploadedFileMock: ReturnType<typeof vi.fn>;
 } {
   const processPromptMock = vi.fn().mockResolvedValue(true);
   const downloadMock = vi.fn(async (_api: Context["api"], fileId: string) => ({
@@ -119,6 +121,14 @@ function createDeps(overrides: Partial<MediaGroupHandlerDeps> = {}): {
   const getCapabilitiesMock = vi.fn().mockResolvedValue({
     input: { image: true, pdf: true },
   });
+  const getCurrentProjectMock = vi.fn().mockReturnValue({
+    id: "project-1",
+    worktree: "/repo",
+  });
+  const saveUploadedFileMock = vi.fn().mockResolvedValue({
+    absolutePath: "/repo/.opencode-telegram/uploads/1-archive.zip",
+    relativePath: ".opencode-telegram/uploads/1-archive.zip",
+  });
 
   const deps: MediaGroupHandlerDeps = {
     ...container,
@@ -127,13 +137,22 @@ function createDeps(overrides: Partial<MediaGroupHandlerDeps> = {}): {
     downloadFile: downloadMock,
     getModelCapabilities: getCapabilitiesMock,
     getStoredModel: vi.fn(() => ({ providerID: "test-provider", modelID: "test-model" })),
+    getCurrentProject: getCurrentProjectMock,
+    saveUploadedFile: saveUploadedFileMock,
     processPrompt: (ctx, input, promptDeps) =>
       processPromptMock(ctx, input.text, promptDeps, input.fileParts),
     ...overrides,
   };
   initializePromptQueueDispatch(deps);
 
-  return { deps, processPromptMock, downloadMock, getCapabilitiesMock };
+  return {
+    deps,
+    processPromptMock,
+    downloadMock,
+    getCapabilitiesMock,
+    getCurrentProjectMock,
+    saveUploadedFileMock,
+  };
 }
 
 async function addToHandler(handler: MediaGroupAttachmentHandler, ctx: Context): Promise<void> {
@@ -366,7 +385,7 @@ describe("bot/handlers/media-group", () => {
     );
   });
 
-  it("sends archives and other non-media files together with the group", async () => {
+  it("saves archives and other non-media files into the project with the group", async () => {
     const image = createDocumentContext({
       messageId: 50,
       fileId: "image-file",
@@ -379,7 +398,7 @@ describe("bot/handlers/media-group", () => {
       filename: "archive.zip",
       mimeType: "application/zip",
     });
-    const { deps, processPromptMock, downloadMock } = createDeps();
+    const { deps, processPromptMock, downloadMock, saveUploadedFileMock } = createDeps();
     const handler = new MediaGroupAttachmentHandler(deps, { debounceMs: 10_000 });
 
     await addToHandler(handler, image.ctx);
@@ -388,20 +407,40 @@ describe("bot/handlers/media-group", () => {
 
     expect(image.replyMock).not.toHaveBeenCalledWith(t("bot.media_group_not_processed"));
     expect(downloadMock).toHaveBeenCalledTimes(2);
+    expect(saveUploadedFileMock).toHaveBeenCalledWith(
+      "/repo",
+      "archive.zip",
+      Buffer.from("content:archive-file"),
+    );
     expect(processPromptMock).toHaveBeenCalledWith(
       image.ctx,
-      "",
+      "The user uploaded a file and it was saved to the project at: .opencode-telegram/uploads/1-archive.zip",
       deps,
-      expect.arrayContaining([
+      [
         expect.objectContaining({ type: "file", mime: "image/png", filename: "screen.png" }),
-        expect.objectContaining({
-          type: "file",
-          mime: "application/zip",
-          filename: "archive.zip",
-          url: expect.stringMatching(/^data:application\/zip;base64,/),
-        }),
-      ]),
+      ],
     );
+  });
+
+  it("rejects a group with a workspace file when no project is selected", async () => {
+    const archive = createDocumentContext({
+      messageId: 52,
+      fileId: "archive-file",
+      filename: "archive.zip",
+      mimeType: "application/zip",
+    });
+    const { deps, processPromptMock, downloadMock, saveUploadedFileMock } = createDeps({
+      getCurrentProject: vi.fn().mockReturnValue(undefined),
+    });
+    const handler = new MediaGroupAttachmentHandler(deps, { debounceMs: 10_000 });
+
+    await addToHandler(handler, archive.ctx);
+    await handler.flushAll();
+
+    expect(archive.replyMock).toHaveBeenCalledWith(t("bot.project_not_selected"));
+    expect(downloadMock).not.toHaveBeenCalled();
+    expect(saveUploadedFileMock).not.toHaveBeenCalled();
+    expect(processPromptMock).not.toHaveBeenCalled();
   });
 
   it("rejects the whole media group when the model lacks image support", async () => {

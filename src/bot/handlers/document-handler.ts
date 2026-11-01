@@ -12,6 +12,12 @@ import {
 import { isDocExtractorConfigured, extractDocument } from "../../app/services/document-extractor-service.js";
 import { getModelCapabilities, supportsInput } from "../../app/services/model-capabilities-service.js";
 import { getStoredModel } from "../../app/services/model-selection-service.js";
+import {
+  saveUploadedFileToProject,
+  type SavedUpload,
+} from "../../app/services/upload-storage-service.js";
+import { getCurrentProject } from "../../app/stores/settings-store.js";
+import type { ProjectInfo } from "../../app/types/project.js";
 import { logger } from "../../utils/logger.js";
 import { t } from "../../i18n/index.js";
 import type { FilePartInput, Model } from "@opencode-ai/sdk/v2";
@@ -33,6 +39,12 @@ export interface DocumentHandlerDeps extends ProcessPromptDeps {
     modelId: string,
   ) => Promise<Model["capabilities"] | null>;
   getStoredModel?: () => { providerID: string; modelID: string };
+  getCurrentProject?: () => ProjectInfo | undefined;
+  saveUploadedFile?: (
+    worktree: string,
+    filename: string,
+    buffer: Buffer,
+  ) => Promise<SavedUpload>;
   processPrompt?: (
     ctx: Context,
     input: IncomingPrompt,
@@ -72,6 +84,8 @@ export async function handleDocumentMessage(
   const downloadFile = deps.downloadFile ?? downloadTelegramFile;
   const getCapabilities = deps.getModelCapabilities ?? getModelCapabilities;
   const getStored = deps.getStoredModel ?? getStoredModel;
+  const getProject = deps.getCurrentProject ?? getCurrentProject;
+  const saveUploadedFile = deps.saveUploadedFile ?? saveUploadedFileToProject;
   const processPrompt = deps.processPrompt ?? processUserPrompt;
 
   const doc = ctx.message?.document;
@@ -256,13 +270,17 @@ export async function handleDocumentMessage(
       return;
     }
 
-    const genericMimeType = mimeType || GENERIC_MIME_TYPE;
-
     if (!isFileSizeAllowed(doc.file_size, MAX_FILE_SIZE_BYTES / 1024)) {
       logger.warn(
         `[Document] File too large: ${filename} (${doc.file_size} bytes > ${MAX_FILE_SIZE_BYTES} bytes)`,
       );
       await ctx.reply(t("bot.file_too_large", { maxSizeMb: "20" }));
+      return;
+    }
+
+    const currentProject = getProject();
+    if (!currentProject) {
+      await ctx.reply(t("bot.project_not_selected"));
       return;
     }
 
@@ -272,18 +290,27 @@ export async function handleDocumentMessage(
     }
     const downloadedFile = await downloadFile(ctx.api, doc.file_id);
 
-    const filePart: FilePartInput = {
-      type: "file",
-      mime: genericMimeType,
-      filename: filename,
-      url: toDataUri(downloadedFile.buffer, genericMimeType),
-    };
+    let saved: SavedUpload;
+    try {
+      saved = await saveUploadedFile(currentProject.worktree, filename, downloadedFile.buffer);
+    } catch (saveErr) {
+      logger.error("[Document] Failed to save uploaded file to project:", saveErr);
+      await ctx.reply(t("bot.file_save_error"));
+      return;
+    }
+
+    const promptWithFile = [
+      `The user uploaded a file and it was saved to the project at: ${saved.relativePath}`,
+      caption,
+    ]
+      .filter((section) => section.trim().length > 0)
+      .join("\n\n");
 
     logger.info(
-      `[Document] Sending file (${downloadedFile.buffer.length} bytes, ${filename}, ${genericMimeType}) with prompt`,
+      `[Document] Saved file (${downloadedFile.buffer.length} bytes, ${filename}) to ${saved.relativePath} with prompt`,
     );
 
-    await submitPrompt(caption, [filePart], doc.file_size);
+    await submitPrompt(promptWithFile, [], doc.file_size);
   } catch (err) {
     logger.error("[Document] Error handling document message:", err);
     await ctx.reply(t("bot.file_download_error"));

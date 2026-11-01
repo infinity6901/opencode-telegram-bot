@@ -130,6 +130,7 @@ export const ko: I18nDictionary = {
   "bot.files_downloading": "⏳ 파일들을 다운로드하는 중...",
   "bot.file_too_large": "⚠️ 파일이 너무 큽니다 (최대 {maxSizeMb}MB)",
   "bot.file_download_error": "🔴 파일 다운로드에 실패했습니다",
+  "bot.file_save_error": "🔴 프로젝트에 파일을 저장하지 못했습니다",
   "bot.file_type_unsupported":
     "⚠️ 지원되지 않는 파일 형식입니다. 이미지, 문서(PDF, DOCX, PPTX) 또는 텍스트/코드 파일을 보내 주세요.",
   "bot.rich_message_media_skipped": "⚠️ 지원되지 않는 미디어 {count}개를 건너뛰었습니다.",

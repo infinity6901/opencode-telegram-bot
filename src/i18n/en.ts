@@ -121,6 +121,7 @@ export const en = {
   "bot.files_downloading": "⏳ Downloading files...",
   "bot.file_too_large": "⚠️ File is too large (max {maxSizeMb}MB)",
   "bot.file_download_error": "🔴 Failed to download file",
+  "bot.file_save_error": "🔴 Failed to save file to the project",
   "bot.file_type_unsupported":
     "⚠️ This file type is not supported. Send an image, document (PDF, DOCX, PPTX), or text/code file.",
   "bot.rich_message_media_skipped": "⚠️ Skipped {count} unsupported media part(s).",

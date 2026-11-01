@@ -39,7 +39,7 @@ Languages: English (`en`), العربية (`ar`), Deutsch (`de`), Español (`es`
 - **Interactive Q&A** — answer agent questions and approve permissions via inline buttons
 - **Runtime settings** — use `/settings` to change runtime preferences; see [Runtime Settings](#runtime-settings)
 - **Voice prompts** — send voice/audio messages, transcribe them via a Whisper-compatible API, and optionally enable spoken replies in `/settings`
-- **File attachments** — send images, PDF documents, text-based files, and any other file type (for example ZIP archives) to OpenCode, including multiple files in one Telegram album
+- **File attachments** — send images, PDF documents, text-based files, and any other file type (for example ZIP archives) to OpenCode, including multiple files in one Telegram album; files the model cannot read directly (like archives) are saved into the current project so the agent can unzip or inspect them with its tools
 - **Scheduled tasks** — schedule prompts to run later or on a recurring interval; see [Scheduled Tasks](#scheduled-tasks)
 - **Message queue** — messages sent while the agent is busy are held and sent one by one afterwards (Queue) or, on OpenCode V2, steered into the running task (Steer); each waiting message is a bottom-keyboard button you can tap to withdraw it; `/detach` leaves waiting messages to the session they were sent to
 - **Context control** — tap the bottom 📊 button to see context usage and the latest assistant message's tokens and cost; compact from the details with an inline confirmation

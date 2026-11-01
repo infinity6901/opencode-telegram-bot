@@ -130,6 +130,7 @@ export const id: I18nDictionary = {
   "bot.files_downloading": "⏳ Mengunduh file...",
   "bot.file_too_large": "⚠️ File terlalu besar (maks {maxSizeMb}MB)",
   "bot.file_download_error": "🔴 Gagal mengunduh file",
+  "bot.file_save_error": "🔴 Gagal menyimpan file ke proyek",
   "bot.file_type_unsupported":
     "⚠️ Jenis file ini tidak didukung. Kirim gambar, dokumen (PDF, DOCX, PPTX), atau file teks/kode.",
   "bot.rich_message_media_skipped": "⚠️ Melewati {count} bagian media yang tidak didukung.",

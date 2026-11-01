@@ -127,6 +127,7 @@ export const pt: I18nDictionary = {
   "bot.files_downloading": "⏳ Baixando arquivos...",
   "bot.file_too_large": "⚠️ O arquivo é muito grande (máx {maxSizeMb}MB)",
   "bot.file_download_error": "🔴 Não foi possível baixar o arquivo",
+  "bot.file_save_error": "🔴 Falha ao salvar o arquivo no projeto",
   "bot.file_type_unsupported":
     "⚠️ Este tipo de arquivo não é compatível. Envie uma imagem, documento (PDF, DOCX, PPTX) ou arquivo de texto/código.",
   "bot.rich_message_media_skipped":

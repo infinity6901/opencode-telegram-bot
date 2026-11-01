@@ -121,6 +121,7 @@ export const ru: I18nDictionary = {
   "bot.files_downloading": "⏳ Скачиваю файлы...",
   "bot.file_too_large": "⚠️ Файл слишком большой (макс. {maxSizeMb}МБ)",
   "bot.file_download_error": "🔴 Не удалось скачать файл",
+  "bot.file_save_error": "🔴 Не удалось сохранить файл в проекте",
   "bot.file_type_unsupported":
     "⚠️ Этот тип файла не поддерживается. Отправьте изображение, документ (PDF, DOCX, PPTX) или текстовый/кодовый файл.",
   "bot.rich_message_media_skipped":

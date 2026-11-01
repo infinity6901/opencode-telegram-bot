@@ -124,6 +124,7 @@ export const ar: I18nDictionary = {
   "bot.files_downloading": "⏳ جارٍ تنزيل الملفات...",
   "bot.file_too_large": "⚠️ حجم الملف أكبر من الحد المسموح ({maxSizeMb}MB)",
   "bot.file_download_error": "🔴 تعذر تنزيل الملف",
+  "bot.file_save_error": "🔴 تعذر حفظ الملف في المشروع",
   "bot.file_type_unsupported":
     "⚠️ نوع الملف غير مدعوم. أرسل صورة أو مستندًا (PDF، DOCX، PPTX) أو ملفًا نصيًا أو برمجيًا.",
   "bot.rich_message_media_skipped": "⚠️ تم تخطي {count} من أجزاء الوسائط غير المدعومة.",

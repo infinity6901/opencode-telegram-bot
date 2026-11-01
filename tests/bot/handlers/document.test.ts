@@ -62,6 +62,8 @@ function createDocumentDeps(overrides: Partial<DocumentHandlerDeps> = {}): {
   downloadMock: ReturnType<typeof vi.fn>;
   getCapabilitiesMock: ReturnType<typeof vi.fn>;
   getStoredModelMock: ReturnType<typeof vi.fn>;
+  getCurrentProjectMock: ReturnType<typeof vi.fn>;
+  saveUploadedFileMock: ReturnType<typeof vi.fn>;
 } {
   const processPromptMock = vi.fn().mockResolvedValue(true);
   const downloadMock = vi.fn().mockResolvedValue({
@@ -75,6 +77,14 @@ function createDocumentDeps(overrides: Partial<DocumentHandlerDeps> = {}): {
     providerID: "test-provider",
     modelID: "test-model",
   });
+  const getCurrentProjectMock = vi.fn().mockReturnValue({
+    id: "project-1",
+    worktree: "/repo",
+  });
+  const saveUploadedFileMock = vi.fn().mockResolvedValue({
+    absolutePath: "/repo/.opencode-telegram/uploads/1-archive.zip",
+    relativePath: ".opencode-telegram/uploads/1-archive.zip",
+  });
 
   const deps: DocumentHandlerDeps = {
     ...container,
@@ -83,6 +93,8 @@ function createDocumentDeps(overrides: Partial<DocumentHandlerDeps> = {}): {
     downloadFile: downloadMock,
     getModelCapabilities: getCapabilitiesMock,
     getStoredModel: getStoredModelMock,
+    getCurrentProject: getCurrentProjectMock,
+    saveUploadedFile: saveUploadedFileMock,
     processPrompt: (ctx, input, promptDeps) =>
       input.fileParts.length > 0
         ? processPromptMock(ctx, input.text, promptDeps, input.fileParts)
@@ -91,7 +103,15 @@ function createDocumentDeps(overrides: Partial<DocumentHandlerDeps> = {}): {
   };
   initializePromptQueueDispatch(deps);
 
-  return { deps, processPromptMock, downloadMock, getCapabilitiesMock, getStoredModelMock };
+  return {
+    deps,
+    processPromptMock,
+    downloadMock,
+    getCapabilitiesMock,
+    getStoredModelMock,
+    getCurrentProjectMock,
+    saveUploadedFileMock,
+  };
 }
 
 let container: AppContainer;
@@ -474,7 +494,7 @@ describe("bot/handlers/document", () => {
       },
     );
 
-    it("sends octet-stream files without an image extension as generic files", async () => {
+    it("saves octet-stream files without an image extension into the project", async () => {
       const { ctx, replyMock } = createDocumentContext({
         document: {
           file_id: "bin-file-id",
@@ -484,20 +504,23 @@ describe("bot/handlers/document", () => {
           file_size: 5000,
         },
       });
-      const { deps, processPromptMock, downloadMock } = createDocumentDeps();
+      const { deps, processPromptMock, downloadMock, saveUploadedFileMock } =
+        createDocumentDeps();
 
       await handleDocumentMessage(ctx, deps);
 
       expect(replyMock).toHaveBeenCalledWith(t("bot.file_downloading"));
       expect(downloadMock).toHaveBeenCalled();
-      expect(processPromptMock).toHaveBeenCalledWith(ctx, "", deps, [
-        expect.objectContaining({
-          type: "file",
-          mime: "application/octet-stream",
-          filename: "firmware.bin",
-          url: expect.stringMatching(/^data:application\/octet-stream;base64,/),
-        }),
-      ]);
+      expect(saveUploadedFileMock).toHaveBeenCalledWith(
+        "/repo",
+        "firmware.bin",
+        Buffer.from("file content here"),
+      );
+      expect(processPromptMock).toHaveBeenCalledWith(
+        ctx,
+        "The user uploaded a file and it was saved to the project at: .opencode-telegram/uploads/1-archive.zip",
+        deps,
+      );
     });
 
     it("routes a PDF named with an image extension by its PDF MIME type", async () => {
@@ -682,7 +705,7 @@ describe("bot/handlers/document", () => {
   });
 
   describe("generic file types", () => {
-    it("sends archives and other non-media files as attachments", async () => {
+    it("saves archives and other non-media files into the project", async () => {
       const { ctx, replyMock } = createDocumentContext({
         document: {
           file_id: "zip-file-id",
@@ -693,23 +716,26 @@ describe("bot/handlers/document", () => {
         },
         caption: "Unpack this",
       });
-      const { deps, processPromptMock, downloadMock } = createDocumentDeps();
+      const { deps, processPromptMock, downloadMock, saveUploadedFileMock } =
+        createDocumentDeps();
 
       await handleDocumentMessage(ctx, deps);
 
       expect(replyMock).toHaveBeenCalledWith(t("bot.file_downloading"));
       expect(downloadMock).toHaveBeenCalled();
-      expect(processPromptMock).toHaveBeenCalledWith(ctx, "Unpack this", deps, [
-        expect.objectContaining({
-          type: "file",
-          mime: "application/zip",
-          filename: "archive.zip",
-          url: expect.stringMatching(/^data:application\/zip;base64,/),
-        }),
-      ]);
+      expect(saveUploadedFileMock).toHaveBeenCalledWith(
+        "/repo",
+        "archive.zip",
+        Buffer.from("file content here"),
+      );
+      expect(processPromptMock).toHaveBeenCalledWith(
+        ctx,
+        "The user uploaded a file and it was saved to the project at: .opencode-telegram/uploads/1-archive.zip\n\nUnpack this",
+        deps,
+      );
     });
 
-    it("falls back to application/octet-stream when the MIME type is missing", async () => {
+    it("saves files with a missing MIME type into the project", async () => {
       const { ctx } = createDocumentContext({
         document: {
           file_id: "unknown-file-id",
@@ -718,17 +744,63 @@ describe("bot/handlers/document", () => {
           file_size: 5000,
         },
       });
-      const { deps, processPromptMock } = createDocumentDeps();
+      const { deps, processPromptMock, saveUploadedFileMock } = createDocumentDeps();
 
       await handleDocumentMessage(ctx, deps);
 
-      expect(processPromptMock).toHaveBeenCalledWith(ctx, "", deps, [
-        expect.objectContaining({
-          type: "file",
-          mime: "application/octet-stream",
-          filename: "data.bin",
-        }),
-      ]);
+      expect(saveUploadedFileMock).toHaveBeenCalledWith(
+        "/repo",
+        "data.bin",
+        Buffer.from("file content here"),
+      );
+      expect(processPromptMock).toHaveBeenCalledWith(
+        ctx,
+        "The user uploaded a file and it was saved to the project at: .opencode-telegram/uploads/1-archive.zip",
+        deps,
+      );
+    });
+
+    it("rejects generic files when no project is selected", async () => {
+      const { ctx, replyMock } = createDocumentContext({
+        document: {
+          file_id: "zip-file-id",
+          file_unique_id: "zip-unique-id",
+          file_name: "archive.zip",
+          mime_type: "application/zip",
+          file_size: 5000,
+        },
+      });
+      const { deps, processPromptMock, downloadMock, saveUploadedFileMock } =
+        createDocumentDeps({
+          getCurrentProject: vi.fn().mockReturnValue(undefined),
+        });
+
+      await handleDocumentMessage(ctx, deps);
+
+      expect(replyMock).toHaveBeenCalledWith(t("bot.project_not_selected"));
+      expect(downloadMock).not.toHaveBeenCalled();
+      expect(saveUploadedFileMock).not.toHaveBeenCalled();
+      expect(processPromptMock).not.toHaveBeenCalled();
+    });
+
+    it("reports a save failure without sending the prompt", async () => {
+      const { ctx, replyMock } = createDocumentContext({
+        document: {
+          file_id: "zip-file-id",
+          file_unique_id: "zip-unique-id",
+          file_name: "archive.zip",
+          mime_type: "application/zip",
+          file_size: 5000,
+        },
+      });
+      const { deps, processPromptMock } = createDocumentDeps({
+        saveUploadedFile: vi.fn().mockRejectedValue(new Error("disk full")),
+      });
+
+      await handleDocumentMessage(ctx, deps);
+
+      expect(replyMock).toHaveBeenCalledWith(t("bot.file_save_error"));
+      expect(processPromptMock).not.toHaveBeenCalled();
     });
 
     it("rejects generic files above the Telegram download limit", async () => {
