@@ -198,6 +198,14 @@ export const en = {
   "projects.selected":
     "✅ Project selected: {project}\n\n📋 Session was reset. Use /sessions or /new for this project.",
   "projects.select_error": "🔴 Failed to select project.",
+  "projects.remove_button": "🗑",
+  "projects.remove_confirm":
+    "🗑 Remove project \"{project}\" from the list?\n\nFiles are not deleted. You can add it again with /open.",
+  "projects.remove_confirm_button": "🗑 Remove",
+  "projects.removed": "✅ Project removed from list: {project}",
+  "projects.remove_error": "🔴 Failed to remove project.",
+  "projects.remove_current":
+    "⚠️ Cannot remove the active project. Switch to another project first.",
 
   "sessions.project_not_selected":
     "🏗 Project is not selected.\n\nFirst select a project with /projects.",
@@ -214,6 +222,15 @@ export const en = {
   "sessions.loading_context": "⏳ Loading context and latest messages...",
   "sessions.selected": "✅ Session selected: {title}",
   "sessions.select_error": "🔴 Failed to select session.",
+  "sessions.delete_button": "🗑",
+  "sessions.delete_confirm":
+    "🗑 Delete session \"{title}\"?\n\nThis cannot be undone.",
+  "sessions.delete_confirm_button": "🗑 Delete",
+  "sessions.deleted": "✅ Session deleted: {title}",
+  "sessions.deleted_current":
+    "✅ Session deleted: {title}\n\nDetached from the deleted session. Project is still selected.",
+  "sessions.delete_error": "🔴 Failed to delete session.",
+  "sessions.delete_busy": "⚠️ Cannot delete a running session. Abort it first.",
   "sessions.preview.empty": "No recent messages.",
   "sessions.last_input.title": "Last user input:",
   "sessions.last_input.attachment": "attachment",
@@ -689,6 +706,12 @@ export const en = {
   "open.prev_page": "⬅️ Previous",
   "open.next_page": "Next ➡️",
   "open.select_current": "✅ Select this folder",
+  "open.new_folder": "📁 New folder",
+  "open.new_folder.prompt": "📝 Enter a name for the new folder in:\n{path}",
+  "open.new_folder.invalid":
+    "⚠️ Invalid folder name. Use a simple name without path separators.",
+  "open.new_folder.exists": "⚠️ A folder with this name already exists.",
+  "open.new_folder.error": "🔴 Failed to create the folder.",
   "open.select_root": "📂 Select a root directory to browse:",
   "open.access_denied": "⛔ Access denied: path is outside allowed roots",
   "open.scan_error": "🔴 Cannot browse directory: {error}",

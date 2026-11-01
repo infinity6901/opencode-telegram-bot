@@ -5,6 +5,9 @@ import { defined } from "../../helpers/defined.js";
 
 const mocked = vi.hoisted(() => ({
   scanDirectoryMock: vi.fn(),
+  mkdirMock: vi.fn().mockResolvedValue(undefined),
+  joinPathMock: vi.fn((directory: string, name: string) => `${directory}/${name}`),
+  removeHiddenProjectPathMock: vi.fn().mockResolvedValue(undefined),
   pathToDisplayPathMock: vi.fn((p: string) => p.replace("/home/user", "~")),
   buildEntryLabelMock: vi.fn((entry: { name: string }) => `📁 ${entry.name}`),
   buildTreeHeaderMock: vi.fn(
@@ -31,10 +34,23 @@ const mocked = vi.hoisted(() => ({
   }),
   switchToProjectMock: vi.fn().mockResolvedValue({ keyboard: [[{ text: "mock" }]] }),
   interactionStartMock: vi.fn(),
+  interactionClearMock: vi.fn(),
 }));
+
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs")>();
+  return {
+    ...actual,
+    promises: {
+      ...actual.promises,
+      mkdir: mocked.mkdirMock,
+    },
+  };
+});
 
 vi.mock("../../../src/app/services/file-browser-service.js", () => ({
   pathToDisplayPath: mocked.pathToDisplayPathMock,
+  joinPath: mocked.joinPathMock,
   scanDirectory: mocked.scanDirectoryMock,
   buildEntryLabel: mocked.buildEntryLabelMock,
   buildTreeHeader: mocked.buildTreeHeaderMock,
@@ -43,6 +59,10 @@ vi.mock("../../../src/app/services/file-browser-service.js", () => ({
   getBrowserRoots: mocked.getBrowserRootsMock,
   isWithinAllowedRoot: mocked.isWithinAllowedRootMock,
   isAllowedRoot: mocked.isAllowedRootMock,
+}));
+
+vi.mock("../../../src/app/stores/settings-store.js", () => ({
+  removeHiddenProjectPath: mocked.removeHiddenProjectPathMock,
 }));
 
 vi.mock("../../../src/bot/menus/inline-menu.js", () => ({
@@ -77,8 +97,15 @@ vi.mock("../../../src/utils/logger.js", () => ({
 }));
 
 import { openCommand } from "../../../src/bot/commands/open-command.js";
-import { handleOpenCallback } from "../../../src/bot/callbacks/file-browser-callback-handler.js";
-import { clearOpenPathIndex } from "../../../src/bot/menus/file-browser-menu.js";
+import {
+  handleOpenCallback,
+  handleOpenNewFolderTextInput,
+} from "../../../src/bot/callbacks/file-browser-callback-handler.js";
+import {
+  clearOpenPathIndex,
+  OPEN_CALLBACK_NEW_FOLDER_CANCEL,
+  OPEN_CALLBACK_NEW_FOLDER_PREFIX,
+} from "../../../src/bot/menus/file-browser-menu.js";
 import { createTestAppContainer } from "../../helpers/app-container.js";
 
 // --- Context factories ---
@@ -105,6 +132,15 @@ function createCallbackContext(data: string, messageId: number = 42): Context {
   } as unknown as Context;
 }
 
+function createTextContext(text: string): Context {
+  return {
+    chat: { id: 123 },
+    message: { text },
+    reply: vi.fn().mockResolvedValue({ message_id: 43 }),
+    api: { deleteMessage: vi.fn().mockResolvedValue(undefined) },
+  } as unknown as Context;
+}
+
 // --- Test data helpers ---
 
 function makeScanResult(
@@ -126,14 +162,27 @@ function makeScanResult(
 
 // --- Tests ---
 
-function createDeps() {
+function createDeps(snapshot: unknown = null) {
   return createTestAppContainer({
     interactionManager: {
       start: mocked.interactionStartMock,
-      getSnapshot: vi.fn(() => null),
-      clear: vi.fn(),
+      getSnapshot: vi.fn(() => snapshot),
+      clear: mocked.interactionClearMock,
     } as never,
   });
+}
+
+function createNewFolderState(directory: string = "/home/user") {
+  return {
+    kind: "custom",
+    expectedInput: "text",
+    metadata: {
+      menuKind: "open",
+      action: "open_new_folder",
+      directory,
+      messageId: 42,
+    },
+  };
 }
 
 describe("open command", () => {
@@ -157,7 +206,13 @@ describe("open command", () => {
     });
     mocked.switchToProjectMock.mockReset().mockResolvedValue({ keyboard: [[{ text: "mock" }]] });
     mocked.upsertSessionDirectoryMock.mockReset().mockResolvedValue(undefined);
+    mocked.mkdirMock.mockReset().mockResolvedValue(undefined);
+    mocked.joinPathMock
+      .mockReset()
+      .mockImplementation((directory: string, name: string) => `${directory}/${name}`);
+    mocked.removeHiddenProjectPathMock.mockReset().mockResolvedValue(undefined);
     mocked.interactionStartMock.mockReset();
+    mocked.interactionClearMock.mockReset();
   });
 
   describe("openCommand", () => {
@@ -372,6 +427,99 @@ describe("open command", () => {
       expect(result).toBe(true);
       // Navigation error is shown as callback query answer
       expect(ctx.answerCallbackQuery).toHaveBeenCalledWith({ text: "Permission denied" });
+    });
+  });
+
+  describe("new folder flow", () => {
+    it("prompts for a folder name on open:newfolder callback", async () => {
+      const ctx = createCallbackContext(`${OPEN_CALLBACK_NEW_FOLDER_PREFIX}/home/user`);
+      const result = await handleOpenCallback(ctx, createDeps());
+
+      expect(result).toBe(true);
+      expect(ctx.answerCallbackQuery).toHaveBeenCalledWith();
+      expect(ctx.editMessageText).toHaveBeenCalledWith(
+        t("open.new_folder.prompt", { path: "~" }),
+        expect.objectContaining({ reply_markup: expect.anything() }),
+      );
+      expect(mocked.interactionStartMock).toHaveBeenCalledWith({
+        kind: "custom",
+        expectedInput: "text",
+        metadata: {
+          menuKind: "open",
+          action: "open_new_folder",
+          directory: "/home/user",
+          messageId: 42,
+        },
+      });
+    });
+
+    it("cancels the new folder prompt and restores the browser", async () => {
+      mocked.scanDirectoryMock.mockResolvedValue(makeScanResult([], "/home/user"));
+      const ctx = createCallbackContext(OPEN_CALLBACK_NEW_FOLDER_CANCEL);
+      const result = await handleOpenCallback(ctx, createDeps(createNewFolderState()));
+
+      expect(result).toBe(true);
+      expect(mocked.interactionClearMock).toHaveBeenCalledWith("open_new_folder_cancelled");
+      expect(ctx.editMessageText).toHaveBeenCalled();
+    });
+
+    it("ignores text input when no new folder prompt is active", async () => {
+      const ctx = createTextContext("new-project");
+
+      expect(await handleOpenNewFolderTextInput(ctx, createDeps())).toBe(false);
+      expect(mocked.mkdirMock).not.toHaveBeenCalled();
+    });
+
+    it("rejects invalid folder names", async () => {
+      const ctx = createTextContext("../escape");
+
+      expect(
+        await handleOpenNewFolderTextInput(ctx, createDeps(createNewFolderState())),
+      ).toBe(true);
+      expect(ctx.reply).toHaveBeenCalledWith(t("open.new_folder.invalid"));
+      expect(mocked.mkdirMock).not.toHaveBeenCalled();
+    });
+
+    it("reports an existing folder", async () => {
+      mocked.mkdirMock.mockRejectedValue(Object.assign(new Error("exists"), { code: "EEXIST" }));
+      const ctx = createTextContext("existing");
+
+      expect(
+        await handleOpenNewFolderTextInput(ctx, createDeps(createNewFolderState())),
+      ).toBe(true);
+      expect(ctx.reply).toHaveBeenCalledWith(t("open.new_folder.exists"));
+    });
+
+    it("creates the folder and selects it as a project", async () => {
+      mocked.getProjectByWorktreeMock.mockResolvedValue({
+        id: "proj-new",
+        worktree: "/home/user/new-project",
+        name: "new-project",
+      });
+      const ctx = createTextContext("new-project");
+      const result = await handleOpenNewFolderTextInput(
+        ctx,
+        createDeps(createNewFolderState()),
+      );
+
+      expect(result).toBe(true);
+      expect(mocked.mkdirMock).toHaveBeenCalledWith("/home/user/new-project");
+      expect(mocked.removeHiddenProjectPathMock).toHaveBeenCalledWith("/home/user/new-project");
+      expect(mocked.upsertSessionDirectoryMock).toHaveBeenCalledWith(
+        "/home/user/new-project",
+        expect.any(Number),
+      );
+      expect(mocked.getProjectByWorktreeMock).toHaveBeenCalledWith("/home/user/new-project");
+      expect(mocked.switchToProjectMock).toHaveBeenCalledWith(
+        ctx,
+        expect.objectContaining({ worktree: "/home/user/new-project" }),
+        "open_project_selected",
+        expect.objectContaining({ presentation: expect.any(Object) }),
+      );
+      expect(ctx.reply).toHaveBeenCalledWith(
+        expect.stringContaining("~"),
+        expect.objectContaining({ reply_markup: expect.anything() }),
+      );
     });
   });
 

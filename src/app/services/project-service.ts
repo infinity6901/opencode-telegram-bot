@@ -2,6 +2,7 @@ import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { opencodeClient } from "../../opencode/client.js";
 import { config } from "../../config.js";
+import { getHiddenProjectPaths } from "../stores/settings-store.js";
 import { getCachedSessionProjects } from "./session-cache-service.js";
 import { logger } from "../../utils/logger.js";
 import { findMissingFolders } from "./folder-presence-service.js";
@@ -71,8 +72,11 @@ async function getResolvedProjects(options?: {
 
   const excludedPaths = config.bot.excludedProjectPaths;
   const excludedKeys = new Set(excludedPaths.map((excluded) => worktreeKey(excluded)));
-  const filteredProjects = excludedKeys.size > 0
-    ? visibleProjects.filter((p) => !excludedKeys.has(worktreeKey(p.worktree)))
+  const hiddenProjectKeys = new Set(getHiddenProjectPaths().map((hidden) => worktreeKey(hidden)));
+  const filteredProjects = excludedKeys.size > 0 || hiddenProjectKeys.size > 0
+    ? visibleProjects.filter(
+        (p) => !excludedKeys.has(worktreeKey(p.worktree)) && !hiddenProjectKeys.has(worktreeKey(p.worktree)),
+      )
     : visibleProjects;
   const hiddenExcluded = visibleProjects.length - filteredProjects.length;
 

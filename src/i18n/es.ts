@@ -740,4 +740,26 @@ export const es: I18nDictionary = {
   "local_command.empty_output": "The command produced no output.",
   "local_command.failed": "Command failed with exit code {exitCode}: {stderr}",
   "local_command.timeout": "The command timed out.",
+  "open.new_folder": "📁 Nueva carpeta",
+  "open.new_folder.prompt": "📝 Introduce un nombre para la nueva carpeta en:\n{path}",
+  "open.new_folder.invalid":
+    "⚠️ Nombre de carpeta no válido. Usa un nombre simple sin separadores de ruta.",
+  "open.new_folder.exists": "⚠️ Ya existe una carpeta con este nombre.",
+  "open.new_folder.error": "🔴 No se pudo crear la carpeta.",
+  "sessions.delete_button": "🗑",
+  "sessions.delete_confirm": "🗑 ¿Eliminar la sesión \"{title}\"?\n\nEsto no se puede deshacer.",
+  "sessions.delete_confirm_button": "🗑 Eliminar",
+  "sessions.deleted": "✅ Sesión eliminada: {title}",
+  "sessions.deleted_current":
+    "✅ Sesión eliminada: {title}\n\nTe has desconectado de la sesión eliminada. El proyecto sigue seleccionado.",
+  "sessions.delete_error": "🔴 No se pudo eliminar la sesión.",
+  "sessions.delete_busy": "⚠️ No se puede eliminar una sesión en ejecución. Cancélala primero.",
+  "projects.remove_button": "🗑",
+  "projects.remove_confirm":
+    "🗑 ¿Quitar el proyecto \"{project}\" de la lista?\n\nLos archivos no se eliminan. Puedes volver a añadirlo con /open.",
+  "projects.remove_confirm_button": "🗑 Quitar",
+  "projects.removed": "✅ Proyecto quitado de la lista: {project}",
+  "projects.remove_error": "🔴 No se pudo quitar el proyecto.",
+  "projects.remove_current":
+    "⚠️ No se puede quitar el proyecto activo. Cambia a otro proyecto primero.",
 };

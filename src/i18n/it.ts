@@ -728,4 +728,27 @@ export const it: I18nDictionary = {
   "local_command.empty_output": "The command produced no output.",
   "local_command.failed": "Command failed with exit code {exitCode}: {stderr}",
   "local_command.timeout": "The command timed out.",
+  "open.new_folder": "📁 Nuova cartella",
+  "open.new_folder.prompt": "📝 Inserisci un nome per la nuova cartella in:\n{path}",
+  "open.new_folder.invalid":
+    "⚠️ Nome cartella non valido. Usa un nome semplice senza separatori di percorso.",
+  "open.new_folder.exists": "⚠️ Esiste già una cartella con questo nome.",
+  "open.new_folder.error": "🔴 Impossibile creare la cartella.",
+  "sessions.delete_button": "🗑",
+  "sessions.delete_confirm":
+    "🗑 Eliminare la sessione \"{title}\"?\n\nQuesta azione non può essere annullata.",
+  "sessions.delete_confirm_button": "🗑 Elimina",
+  "sessions.deleted": "✅ Sessione eliminata: {title}",
+  "sessions.deleted_current":
+    "✅ Sessione eliminata: {title}\n\nDisconnesso dalla sessione eliminata. Il progetto è ancora selezionato.",
+  "sessions.delete_error": "🔴 Impossibile eliminare la sessione.",
+  "sessions.delete_busy": "⚠️ Impossibile eliminare una sessione in esecuzione. Annullala prima.",
+  "projects.remove_button": "🗑",
+  "projects.remove_confirm":
+    "🗑 Rimuovere il progetto \"{project}\" dall'elenco?\n\nI file non vengono eliminati. Puoi aggiungerlo di nuovo con /open.",
+  "projects.remove_confirm_button": "🗑 Rimuovi",
+  "projects.removed": "✅ Progetto rimosso dall'elenco: {project}",
+  "projects.remove_error": "🔴 Impossibile rimuovere il progetto.",
+  "projects.remove_current":
+    "⚠️ Impossibile rimuovere il progetto attivo. Passa prima a un altro progetto.",
 };

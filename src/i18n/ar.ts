@@ -696,4 +696,25 @@ export const ar: I18nDictionary = {
   "local_command.empty_output": "The command produced no output.",
   "local_command.failed": "Command failed with exit code {exitCode}: {stderr}",
   "local_command.timeout": "The command timed out.",
+  "open.new_folder": "📁 مجلد جديد",
+  "open.new_folder.prompt": "📝 أدخل اسمًا للمجلد الجديد في:\n{path}",
+  "open.new_folder.invalid":
+    "⚠️ اسم مجلد غير صالح. استخدم اسمًا بسيطًا بدون فواصل مسارات.",
+  "open.new_folder.exists": "⚠️ يوجد مجلد بهذا الاسم بالفعل.",
+  "open.new_folder.error": "🔴 فشل إنشاء المجلد.",
+  "sessions.delete_button": "🗑",
+  "sessions.delete_confirm": "🗑 حذف الجلسة \"{title}\"؟\n\nلا يمكن التراجع عن هذا.",
+  "sessions.delete_confirm_button": "🗑 حذف",
+  "sessions.deleted": "✅ تم حذف الجلسة: {title}",
+  "sessions.deleted_current":
+    "✅ تم حذف الجلسة: {title}\n\nتم فصل الجلسة المحذوفة. المشروع لا يزال محددًا.",
+  "sessions.delete_error": "🔴 فشل حذف الجلسة.",
+  "sessions.delete_busy": "⚠️ لا يمكن حذف جلسة قيد التشغيل. أوقفها أولًا.",
+  "projects.remove_button": "🗑",
+  "projects.remove_confirm":
+    "🗑 إزالة المشروع \"{project}\" من القائمة؟\n\nلن يتم حذف الملفات. يمكنك إضافته مرة أخرى باستخدام /open.",
+  "projects.remove_confirm_button": "🗑 إزالة",
+  "projects.removed": "✅ تمت إزالة المشروع من القائمة: {project}",
+  "projects.remove_error": "🔴 فشل إزالة المشروع.",
+  "projects.remove_current": "⚠️ لا يمكن إزالة المشروع النشط. بدّل إلى مشروع آخر أولًا.",
 };

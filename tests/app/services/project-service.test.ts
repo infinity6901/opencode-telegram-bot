@@ -3,10 +3,17 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { projectListMock, fileListMock, cachedSessionProjectsMock, configMock } = vi.hoisted(() => ({
+const {
+  projectListMock,
+  fileListMock,
+  cachedSessionProjectsMock,
+  getHiddenProjectPathsMock,
+  configMock,
+} = vi.hoisted(() => ({
   projectListMock: vi.fn(),
   fileListMock: vi.fn(),
   cachedSessionProjectsMock: vi.fn(),
+  getHiddenProjectPathsMock: vi.fn(() => [] as string[]),
   configMock: {
     bot: {
       excludedProjectPaths: [] as string[],
@@ -28,6 +35,10 @@ vi.mock("../../../src/config.js", () => ({
   config: configMock,
 }));
 
+vi.mock("../../../src/app/stores/settings-store.js", () => ({
+  getHiddenProjectPaths: getHiddenProjectPathsMock,
+}));
+
 vi.mock("../../../src/app/services/session-cache-service.js", () => ({
   getCachedSessionProjects: cachedSessionProjectsMock,
   __resetSessionDirectoryCacheForTests: vi.fn(),
@@ -45,6 +56,7 @@ describe("project/manager", () => {
   beforeEach(() => {
     projectListMock.mockReset();
     cachedSessionProjectsMock.mockReset();
+    getHiddenProjectPathsMock.mockReset().mockReturnValue([]);
     configMock.bot.excludedProjectPaths = [];
   });
 
@@ -195,6 +207,42 @@ describe("project/manager", () => {
     const projects = await getProjects();
 
     expect(projects).toEqual([{ id: "p3", worktree: "/home/user/repo-c", name: "Repo C" }]);
+  });
+
+  it("filters out projects hidden in settings", async () => {
+    getHiddenProjectPathsMock.mockReturnValue(["/home/user/repo-b/"]);
+
+    projectListMock.mockResolvedValueOnce({
+      data: [
+        { id: "p1", worktree: "/home/user/repo-a", name: "Repo A" },
+        { id: "p2", worktree: "/home/user/repo-b", name: "Repo B" },
+      ],
+      error: null,
+    });
+    cachedSessionProjectsMock.mockResolvedValueOnce([]);
+
+    const projects = await getProjects();
+
+    expect(projects).toEqual([{ id: "p1", worktree: "/home/user/repo-a", name: "Repo A" }]);
+  });
+
+  it("keeps hidden projects available for worktree lookup", async () => {
+    getHiddenProjectPathsMock.mockReturnValue(["/home/user/repo-b"]);
+
+    projectListMock.mockResolvedValueOnce({
+      data: [
+        { id: "p1", worktree: "/home/user/repo-a", name: "Repo A" },
+        { id: "p2", worktree: "/home/user/repo-b", name: "Repo B" },
+      ],
+      error: null,
+    });
+    cachedSessionProjectsMock.mockResolvedValueOnce([]);
+
+    await expect(getProjectByWorktree("/home/user/repo-b")).resolves.toEqual({
+      id: "p2",
+      worktree: "/home/user/repo-b",
+      name: "Repo B",
+    });
   });
 
   it("applies exclusion after hiding linked git worktrees", async () => {

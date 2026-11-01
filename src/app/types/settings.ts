@@ -31,4 +31,5 @@ export interface Settings {
   sessionDirectoryCache?: SessionDirectoryCacheInfo | undefined;
   scheduledTasks?: ScheduledTask[] | undefined;
   scheduledTaskSessionIgnores?: ScheduledTaskSessionIgnoreInfo[] | undefined;
+  hiddenProjectPaths?: string[] | undefined;
 }

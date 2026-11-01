@@ -743,4 +743,26 @@ export const fr: I18nDictionary = {
   "local_command.empty_output": "The command produced no output.",
   "local_command.failed": "Command failed with exit code {exitCode}: {stderr}",
   "local_command.timeout": "The command timed out.",
+  "open.new_folder": "📁 Nouveau dossier",
+  "open.new_folder.prompt": "📝 Saisissez un nom pour le nouveau dossier dans :\n{path}",
+  "open.new_folder.invalid":
+    "⚠️ Nom de dossier invalide. Utilisez un nom simple sans séparateur de chemin.",
+  "open.new_folder.exists": "⚠️ Un dossier portant ce nom existe déjà.",
+  "open.new_folder.error": "🔴 Impossible de créer le dossier.",
+  "sessions.delete_button": "🗑",
+  "sessions.delete_confirm": "🗑 Supprimer la session \"{title}\" ?\n\nCette action est irréversible.",
+  "sessions.delete_confirm_button": "🗑 Supprimer",
+  "sessions.deleted": "✅ Session supprimée : {title}",
+  "sessions.deleted_current":
+    "✅ Session supprimée : {title}\n\nDétaché de la session supprimée. Le projet reste sélectionné.",
+  "sessions.delete_error": "🔴 Impossible de supprimer la session.",
+  "sessions.delete_busy": "⚠️ Impossible de supprimer une session en cours. Annulez-la d'abord.",
+  "projects.remove_button": "🗑",
+  "projects.remove_confirm":
+    "🗑 Retirer le projet \"{project}\" de la liste ?\n\nLes fichiers ne sont pas supprimés. Vous pouvez le rajouter avec /open.",
+  "projects.remove_confirm_button": "🗑 Retirer",
+  "projects.removed": "✅ Projet retiré de la liste : {project}",
+  "projects.remove_error": "🔴 Impossible de retirer le projet.",
+  "projects.remove_current":
+    "⚠️ Impossible de retirer le projet actif. Passez d'abord à un autre projet.",
 };

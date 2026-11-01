@@ -743,4 +743,26 @@ export const de: I18nDictionary = {
   "local_command.empty_output": "The command produced no output.",
   "local_command.failed": "Command failed with exit code {exitCode}: {stderr}",
   "local_command.timeout": "The command timed out.",
+  "open.new_folder": "📁 Neuer Ordner",
+  "open.new_folder.prompt": "📝 Gib einen Namen für den neuen Ordner ein in:\n{path}",
+  "open.new_folder.invalid":
+    "⚠️ Ungültiger Ordnername. Verwende einen einfachen Namen ohne Pfadtrennzeichen.",
+  "open.new_folder.exists": "⚠️ Ein Ordner mit diesem Namen existiert bereits.",
+  "open.new_folder.error": "🔴 Ordner konnte nicht erstellt werden.",
+  "sessions.delete_button": "🗑",
+  "sessions.delete_confirm": "🗑 Sitzung \"{title}\" löschen?\n\nDies kann nicht rückgängig gemacht werden.",
+  "sessions.delete_confirm_button": "🗑 Löschen",
+  "sessions.deleted": "✅ Sitzung gelöscht: {title}",
+  "sessions.deleted_current":
+    "✅ Sitzung gelöscht: {title}\n\nVon der gelöschten Sitzung getrennt. Das Projekt bleibt ausgewählt.",
+  "sessions.delete_error": "🔴 Sitzung konnte nicht gelöscht werden.",
+  "sessions.delete_busy": "⚠️ Eine laufende Sitzung kann nicht gelöscht werden. Brich sie zuerst ab.",
+  "projects.remove_button": "🗑",
+  "projects.remove_confirm":
+    "🗑 Projekt \"{project}\" aus der Liste entfernen?\n\nDateien werden nicht gelöscht. Du kannst es mit /open erneut hinzufügen.",
+  "projects.remove_confirm_button": "🗑 Entfernen",
+  "projects.removed": "✅ Projekt aus der Liste entfernt: {project}",
+  "projects.remove_error": "🔴 Projekt konnte nicht entfernt werden.",
+  "projects.remove_current":
+    "⚠️ Das aktive Projekt kann nicht entfernt werden. Wechsle zuerst zu einem anderen Projekt.",
 };

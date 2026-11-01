@@ -1,9 +1,13 @@
-import type { Bot, Context } from "grammy";
+import { InlineKeyboard, type Bot, type Context } from "grammy";
 import type { AppContainer } from "../../app/bootstrap/app-container.js";
 import { opencodeClient } from "../../opencode/client.js";
 import { resolveProjectAgent } from "../../app/services/agent-selection-service.js";
 import { getStoredModel } from "../../app/services/model-selection-service.js";
-import { setCurrentSession } from "../../app/services/session-service.js";
+import {
+  clearSession,
+  getCurrentSession,
+  setCurrentSession,
+} from "../../app/services/session-service.js";
 import { applySessionSettings } from "../../app/services/session-settings-service.js";
 import type { SessionInfo } from "../../app/types/session.js";
 import { getCurrentProject } from "../../app/stores/settings-store.js";
@@ -16,7 +20,9 @@ import { config } from "../../config.js";
 import { t } from "../../i18n/index.js";
 import { formatSessionTitle } from "../../app/formatters/session-title-formatter.js";
 import { alert, failure } from "./feedback.js";
-import { attachToSession } from "../../app/services/attach-service.js";
+import { attachToSession, detachAttachedSession } from "../../app/services/attach-service.js";
+import { withdrawPromptQueue } from "../../app/services/prompt-inbox-service.js";
+import { clearPromptResponseMode } from "../handlers/prompt.js";
 import { renderAssistantFinalPartsSafe } from "../messages/assistant-rendering.js";
 import {
   AGENT_TEXT_LINK_PREVIEW_OPTIONS,
@@ -35,9 +41,13 @@ import type { QuotedNotification } from "../../app/services/quoted-notification.
 import {
   buildSessionSelectionMenuView,
   parseBackgroundSessionCallback,
+  parseSessionDeleteCallback,
+  parseSessionDeleteConfirmCallback,
   parseSessionIdCallback,
   parseSessionPageCallback,
   SESSION_CALLBACK_PREFIX,
+  SESSION_DELETE_CANCEL_CALLBACK,
+  SESSION_DELETE_CONFIRM_CALLBACK_PREFIX,
   loadSessionPage,
 } from "../menus/session-selection-menu.js";
 
@@ -51,7 +61,9 @@ export type SessionSelectDeps = Pick<
   | "permissionManager"
   | "pinnedMessageManager"
   | "questionManager"
+  | "resetAggregator"
   | "resetInteractions"
+  | "resetRuntimeStreams"
   | "summaryAggregator"
 > & {
   bot: Bot<Context>;
@@ -284,6 +296,140 @@ export async function handleBackgroundSessionOpen(
   return true;
 }
 
+async function renderSessionList(
+  ctx: Context,
+  deps: SessionSelectDeps,
+  directory: string,
+  page: number = 0,
+): Promise<void> {
+  const pageSize = config.bot.sessionsListLimit;
+  const pageData = await loadSessionPage(directory, page, pageSize);
+  if (pageData.sessions.length === 0) {
+    deps.interactionManager.clear("session_list_empty");
+    await ctx.editMessageText(t("sessions.empty"));
+    return;
+  }
+
+  const { text, keyboard } = buildSessionSelectionMenuView(pageData, pageSize);
+  appendInlineMenuCancelButton(keyboard, "session");
+  await ctx.editMessageText(text, { reply_markup: keyboard });
+}
+
+async function showSessionDeleteConfirmation(
+  ctx: Context,
+  directory: string,
+  sessionId: string,
+): Promise<void> {
+  const { data: session, error } = await opencodeClient.session.get({
+    sessionID: sessionId,
+    directory,
+  });
+
+  if (error || !session) {
+    throw error || new Error("Failed to get session details");
+  }
+
+  const keyboard = new InlineKeyboard()
+    .text(
+      t("sessions.delete_confirm_button"),
+      `${SESSION_DELETE_CONFIRM_CALLBACK_PREFIX}${sessionId}`,
+    )
+    .row()
+    .text(t("inline.button.cancel"), SESSION_DELETE_CANCEL_CALLBACK);
+
+  await ctx.answerCallbackQuery();
+  await ctx.editMessageText(
+    t("sessions.delete_confirm", { title: formatSessionTitle(session.title) }),
+    { reply_markup: keyboard },
+  );
+}
+
+async function deleteSession(
+  ctx: Context,
+  deps: SessionSelectDeps,
+  directory: string,
+  sessionId: string,
+): Promise<void> {
+  const { data: session, error } = await opencodeClient.session.get({
+    sessionID: sessionId,
+    directory,
+  });
+
+  if (error || !session) {
+    throw error || new Error("Failed to get session details");
+  }
+
+  const title = formatSessionTitle(session.title);
+
+  const { data: statuses, error: statusError } = await opencodeClient.session.status({ directory });
+  if (statusError) {
+    logger.warn("[Sessions] Failed to read session status before deletion:", statusError);
+  } else if (statuses?.[sessionId]?.type === "busy") {
+    await alert(ctx, "sessions.delete_busy");
+    return;
+  }
+
+  const isCurrentSession = getCurrentSession()?.id === sessionId;
+
+  const { error: deleteError } = await opencodeClient.session.delete({
+    sessionID: sessionId,
+    directory,
+  });
+  if (deleteError) {
+    throw deleteError;
+  }
+
+  if (isCurrentSession) {
+    await withdrawPromptQueue("session_deleted");
+    clearPromptResponseMode(sessionId);
+  }
+
+  logger.info(
+    `[Sessions] Session deleted: id=${sessionId}, title="${session.title}", project=${directory}`,
+  );
+
+  if (!isCurrentSession) {
+    await ctx.answerCallbackQuery();
+    await renderSessionList(ctx, deps, directory);
+    return;
+  }
+
+  detachAttachedSession("session_deleted", deps);
+  clearSession();
+  deps.foregroundSessionState.markIdle(sessionId);
+  deps.resetRuntimeStreams("session_deleted");
+  deps.resetInteractions("session_deleted");
+
+  if (deps.pinnedMessageManager.isInitialized()) {
+    try {
+      await deps.pinnedMessageManager.clear();
+    } catch (error) {
+      logger.error("[Sessions] Failed to clear pinned message after session deletion:", error);
+    }
+  }
+
+  if (ctx.chat) {
+    deps.keyboardManager.initialize(ctx.api, ctx.chat.id);
+  }
+
+  try {
+    await deps.pinnedMessageManager.refreshContextLimit();
+  } catch (error) {
+    logger.error("[Sessions] Failed to refresh context limit after session deletion:", error);
+  }
+  const contextLimit = deps.pinnedMessageManager.getContextLimit();
+  deps.keyboardManager.updateContext(0, contextLimit);
+
+  const keyboard = deps.keyboardManager.getKeyboard();
+
+  await ctx.answerCallbackQuery();
+  await ctx.reply(
+    t("sessions.deleted_current", { title }),
+    keyboard ? { reply_markup: keyboard } : {},
+  );
+  await ctx.deleteMessage().catch(() => {});
+}
+
 export async function handleSessionSelect(ctx: Context, deps: SessionSelectDeps): Promise<boolean> {
   const callbackQuery = ctx.callbackQuery;
   if (!callbackQuery?.data || !callbackQuery.data.startsWith(SESSION_CALLBACK_PREFIX)) {
@@ -297,6 +443,9 @@ export async function handleSessionSelect(ctx: Context, deps: SessionSelectDeps)
 
   const page = parseSessionPageCallback(callbackQuery.data);
   const sessionId = parseSessionIdCallback(callbackQuery.data);
+  const deleteSessionId = parseSessionDeleteCallback(callbackQuery.data);
+  const deleteConfirmSessionId = parseSessionDeleteConfirmCallback(callbackQuery.data);
+  const isDeleteCancel = callbackQuery.data === SESSION_DELETE_CANCEL_CALLBACK;
 
   const isActiveMenu = await ensureActiveInlineMenu(ctx, "session", deps);
   if (!isActiveMenu) {
@@ -309,6 +458,32 @@ export async function handleSessionSelect(ctx: Context, deps: SessionSelectDeps)
     if (!currentProject) {
       deps.resetInteractions("session_select_project_missing");
       await alert(ctx, "sessions.select_project_first");
+      return true;
+    }
+
+    if (isDeleteCancel) {
+      await ctx.answerCallbackQuery();
+      await renderSessionList(ctx, deps, currentProject.worktree);
+      return true;
+    }
+
+    if (deleteSessionId !== null) {
+      try {
+        await showSessionDeleteConfirmation(ctx, currentProject.worktree, deleteSessionId);
+      } catch (error) {
+        logger.error("[Sessions] Error showing session deletion confirmation:", error);
+        await failure(ctx, "sessions.delete_error");
+      }
+      return true;
+    }
+
+    if (deleteConfirmSessionId !== null) {
+      try {
+        await deleteSession(ctx, deps, currentProject.worktree, deleteConfirmSessionId);
+      } catch (error) {
+        logger.error("[Sessions] Error deleting session:", error);
+        await failure(ctx, "sessions.delete_error");
+      }
       return true;
     }
 

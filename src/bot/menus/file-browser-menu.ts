@@ -30,6 +30,8 @@ export const OPEN_CALLBACK_NAV_PREFIX = "open:nav:";
 export const OPEN_CALLBACK_SELECT_PREFIX = "open:sel:";
 export const OPEN_CALLBACK_PAGE_PREFIX = "open:pg:";
 export const OPEN_CALLBACK_ROOTS = "open:roots";
+export const OPEN_CALLBACK_NEW_FOLDER_PREFIX = "open:newfolder:";
+export const OPEN_CALLBACK_NEW_FOLDER_CANCEL = "open:newfolder-cancel";
 
 export const LS_CALLBACK_PREFIX = "ls:";
 export const LS_CALLBACK_NAV_PREFIX = "ls:nav:";
@@ -221,6 +223,12 @@ function buildOpenBrowseKeyboard(
 
   keyboard
     .text(t("open.select_current"), encodeOpenPathForCallback(OPEN_CALLBACK_SELECT_PREFIX, currentPath))
+    .row();
+  keyboard
+    .text(
+      t("open.new_folder"),
+      encodeOpenPathForCallback(OPEN_CALLBACK_NEW_FOLDER_PREFIX, currentPath),
+    )
     .row();
   appendInlineMenuCancelButton(keyboard, "open");
 

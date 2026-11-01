@@ -724,4 +724,26 @@ export const ru: I18nDictionary = {
   "local_command.empty_output": "Команда не вернула вывод.",
   "local_command.failed": "Команда завершилась с кодом {exitCode}: {stderr}",
   "local_command.timeout": "Время выполнения команды истекло.",
+  "open.new_folder": "📁 Новая папка",
+  "open.new_folder.prompt": "📝 Введите имя новой папки в:\n{path}",
+  "open.new_folder.invalid":
+    "⚠️ Недопустимое имя папки. Используйте простое имя без разделителей пути.",
+  "open.new_folder.exists": "⚠️ Папка с таким именем уже существует.",
+  "open.new_folder.error": "🔴 Не удалось создать папку.",
+  "sessions.delete_button": "🗑",
+  "sessions.delete_confirm": "🗑 Удалить сессию \"{title}\"?\n\nЭто действие нельзя отменить.",
+  "sessions.delete_confirm_button": "🗑 Удалить",
+  "sessions.deleted": "✅ Сессия удалена: {title}",
+  "sessions.deleted_current":
+    "✅ Сессия удалена: {title}\n\nВы отключены от удалённой сессии. Проект остаётся выбранным.",
+  "sessions.delete_error": "🔴 Не удалось удалить сессию.",
+  "sessions.delete_busy": "⚠️ Нельзя удалить запущенную сессию. Сначала остановите её.",
+  "projects.remove_button": "🗑",
+  "projects.remove_confirm":
+    "🗑 Убрать проект \"{project}\" из списка?\n\nФайлы не удаляются. Вы можете добавить его снова через /open.",
+  "projects.remove_confirm_button": "🗑 Убрать",
+  "projects.removed": "✅ Проект убран из списка: {project}",
+  "projects.remove_error": "🔴 Не удалось убрать проект.",
+  "projects.remove_current":
+    "⚠️ Нельзя убрать активный проект. Сначала переключитесь на другой проект.",
 };

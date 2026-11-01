@@ -718,4 +718,26 @@ export const tr: I18nDictionary = {
   "local_command.empty_output": "Komut herhangi bir çıktı üretmedi.",
   "local_command.failed": "Komut {exitCode} çıkış koduyla başarısız oldu: {stderr}",
   "local_command.timeout": "Komut zaman aşımına uğradı.",
+  "open.new_folder": "📁 Yeni klasör",
+  "open.new_folder.prompt": "📝 Yeni klasör için bir ad girin:\n{path}",
+  "open.new_folder.invalid":
+    "⚠️ Geçersiz klasör adı. Yol ayırıcıları olmadan basit bir ad kullanın.",
+  "open.new_folder.exists": "⚠️ Bu ada sahip bir klasör zaten var.",
+  "open.new_folder.error": "🔴 Klasör oluşturulamadı.",
+  "sessions.delete_button": "🗑",
+  "sessions.delete_confirm": "🗑 \"{title}\" oturumu silinsin mi?\n\nBu işlem geri alınamaz.",
+  "sessions.delete_confirm_button": "🗑 Sil",
+  "sessions.deleted": "✅ Oturum silindi: {title}",
+  "sessions.deleted_current":
+    "✅ Oturum silindi: {title}\n\nSilinen oturumdan ayrıldınız. Proje seçili kalıyor.",
+  "sessions.delete_error": "🔴 Oturum silinemedi.",
+  "sessions.delete_busy": "⚠️ Çalışan bir oturum silinemez. Önce iptal edin.",
+  "projects.remove_button": "🗑",
+  "projects.remove_confirm":
+    "🗑 \"{project}\" projesi listeden kaldırılsın mı?\n\nDosyalar silinmez. /open ile yeniden ekleyebilirsiniz.",
+  "projects.remove_confirm_button": "🗑 Kaldır",
+  "projects.removed": "✅ Proje listeden kaldırıldı: {project}",
+  "projects.remove_error": "🔴 Proje kaldırılamadı.",
+  "projects.remove_current":
+    "⚠️ Etkin proje kaldırılamaz. Önce başka bir projeye geçin.",
 };

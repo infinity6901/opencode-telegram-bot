@@ -8,6 +8,9 @@ import type { ProjectInfo } from "../../app/types/project.js";
 
 const MAX_INLINE_BUTTON_LABEL_LENGTH = 64;
 export const PROJECT_PAGE_CALLBACK_PREFIX = "projects:page:";
+export const PROJECT_REMOVE_CALLBACK_PREFIX = "projects:remove:";
+export const PROJECT_REMOVE_CONFIRM_CALLBACK_PREFIX = "projects:remove-confirm:";
+export const PROJECT_REMOVE_CANCEL_CALLBACK = "projects:remove-cancel";
 
 interface ProjectsPaginationRange {
   page: number;
@@ -54,6 +57,24 @@ export function parseProjectPageCallback(data: string): number | null {
   }
 
   return Number.parseInt(rawPage, 10);
+}
+
+export function parseProjectRemoveCallback(data: string): string | null {
+  if (!data.startsWith(PROJECT_REMOVE_CALLBACK_PREFIX)) {
+    return null;
+  }
+
+  const projectId = data.slice(PROJECT_REMOVE_CALLBACK_PREFIX.length);
+  return projectId.length > 0 ? projectId : null;
+}
+
+export function parseProjectRemoveConfirmCallback(data: string): string | null {
+  if (!data.startsWith(PROJECT_REMOVE_CONFIRM_CALLBACK_PREFIX)) {
+    return null;
+  }
+
+  const projectId = data.slice(PROJECT_REMOVE_CONFIRM_CALLBACK_PREFIX.length);
+  return projectId.length > 0 ? projectId : null;
 }
 
 export function calculateProjectsPaginationRange(
@@ -142,7 +163,14 @@ async function buildProjectsKeyboard(
           worktreeKey(project.worktree) === worktreeKey(activeProjectWorktree)));
     const label = buildProjectButtonLabel(startIndex + index, project.worktree);
     const labelWithCheck = formatProjectButtonLabel(label, Boolean(isActive));
-    keyboard.text(labelWithCheck, `project:${project.id}`).row();
+    keyboard.text(labelWithCheck, `project:${project.id}`);
+    if (!isActive) {
+      keyboard.text(
+        t("projects.remove_button"),
+        `${PROJECT_REMOVE_CALLBACK_PREFIX}${project.id}`,
+      );
+    }
+    keyboard.row();
   });
 
   if (totalPages > 1) {

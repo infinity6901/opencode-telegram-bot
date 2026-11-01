@@ -225,6 +225,39 @@ describe("interaction guard", () => {
     expect(decision.state?.kind).toBe("permission");
   });
 
+  it("allows the new-folder cancel callback during its text interaction", () => {
+    startInteractionForTest(deps.interactionManager, {
+      kind: "custom",
+      expectedInput: "text",
+      metadata: { menuKind: "open", action: "open_new_folder" },
+    });
+
+    const decision = resolveInteractionGuardDecision(
+      createContext({ callbackData: "open:newfolder-cancel" }),
+      deps,
+    );
+
+    expect(decision.allow).toBe(true);
+    expect(decision.inputType).toBe("callback");
+  });
+
+  it("allows the new-folder cancel callback while the session is busy", () => {
+    deps.foregroundSessionState.markBusy("session-1", "D:\\Projects\\Repo");
+    startInteractionForTest(deps.interactionManager, {
+      kind: "custom",
+      expectedInput: "text",
+      metadata: { menuKind: "open", action: "open_new_folder" },
+    });
+
+    const decision = resolveInteractionGuardDecision(
+      createContext({ callbackData: "open:newfolder-cancel" }),
+      deps,
+    );
+
+    expect(decision.allow).toBe(true);
+    expect(decision.busy).toBe(true);
+  });
+
   it("blocks disallowed command while question mixed interaction is active", () => {
     startInteractionForTest(deps.interactionManager, {
       kind: "question",

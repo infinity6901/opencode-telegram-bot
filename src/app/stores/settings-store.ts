@@ -159,6 +159,45 @@ export function clearProject(): void {
   void writeSettingsFile(currentSettings);
 }
 
+function isWindowsWorktreePath(worktree: string): boolean {
+  return process.platform === "win32" || /^[a-zA-Z]:[\\/]/.test(worktree) || /^\\\\/.test(worktree);
+}
+
+function hiddenProjectPathKey(worktree: string): string {
+  const pathModule = isWindowsWorktreePath(worktree) ? path.win32 : path.posix;
+  const normalized = pathModule.normalize(worktree);
+  const root = pathModule.parse(normalized).root;
+  const trimmed = normalized === root ? normalized : normalized.replace(/[\\/]+$/, "");
+  return pathModule === path.win32 ? trimmed.toLowerCase() : trimmed;
+}
+
+export function getHiddenProjectPaths(): string[] {
+  return [...(currentSettings.hiddenProjectPaths ?? [])];
+}
+
+export function addHiddenProjectPath(worktree: string): Promise<void> {
+  const key = hiddenProjectPathKey(worktree);
+  const existing = currentSettings.hiddenProjectPaths ?? [];
+  if (existing.some((hidden) => hiddenProjectPathKey(hidden) === key)) {
+    return Promise.resolve();
+  }
+
+  currentSettings.hiddenProjectPaths = [...existing, worktree];
+  return writeSettingsFile(currentSettings);
+}
+
+export function removeHiddenProjectPath(worktree: string): Promise<void> {
+  const key = hiddenProjectPathKey(worktree);
+  const existing = currentSettings.hiddenProjectPaths ?? [];
+  const next = existing.filter((hidden) => hiddenProjectPathKey(hidden) !== key);
+  if (next.length === existing.length) {
+    return Promise.resolve();
+  }
+
+  currentSettings.hiddenProjectPaths = next;
+  return writeSettingsFile(currentSettings);
+}
+
 export function getCurrentSession(): SessionInfo | undefined {
   return currentSettings.currentSession;
 }

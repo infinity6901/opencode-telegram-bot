@@ -716,4 +716,26 @@ export const id: I18nDictionary = {
   "local_command.empty_output": "Perintah tidak menghasilkan output.",
   "local_command.failed": "Perintah gagal dengan exit code {exitCode}: {stderr}",
   "local_command.timeout": "Perintah kehabisan waktu.",
+  "open.new_folder": "📁 Folder baru",
+  "open.new_folder.prompt": "📝 Masukkan nama untuk folder baru di:\n{path}",
+  "open.new_folder.invalid":
+    "⚠️ Nama folder tidak valid. Gunakan nama sederhana tanpa pemisah jalur.",
+  "open.new_folder.exists": "⚠️ Folder dengan nama ini sudah ada.",
+  "open.new_folder.error": "🔴 Gagal membuat folder.",
+  "sessions.delete_button": "🗑",
+  "sessions.delete_confirm": "🗑 Hapus sesi \"{title}\"?\n\nTindakan ini tidak dapat dibatalkan.",
+  "sessions.delete_confirm_button": "🗑 Hapus",
+  "sessions.deleted": "✅ Sesi dihapus: {title}",
+  "sessions.deleted_current":
+    "✅ Sesi dihapus: {title}\n\nTerlepas dari sesi yang dihapus. Proyek tetap dipilih.",
+  "sessions.delete_error": "🔴 Gagal menghapus sesi.",
+  "sessions.delete_busy": "⚠️ Tidak dapat menghapus sesi yang sedang berjalan. Batalkan dulu.",
+  "projects.remove_button": "🗑",
+  "projects.remove_confirm":
+    "🗑 Hapus proyek \"{project}\" dari daftar?\n\nFile tidak dihapus. Anda dapat menambahkannya lagi dengan /open.",
+  "projects.remove_confirm_button": "🗑 Hapus",
+  "projects.removed": "✅ Proyek dihapus dari daftar: {project}",
+  "projects.remove_error": "🔴 Gagal menghapus proyek.",
+  "projects.remove_current":
+    "⚠️ Tidak dapat menghapus proyek aktif. Beralih ke proyek lain dulu.",
 };

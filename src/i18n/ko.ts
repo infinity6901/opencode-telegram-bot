@@ -723,4 +723,27 @@ export const ko: I18nDictionary = {
   "local_command.empty_output": "The command produced no output.",
   "local_command.failed": "Command failed with exit code {exitCode}: {stderr}",
   "local_command.timeout": "The command timed out.",
+  "open.new_folder": "📁 새 폴더",
+  "open.new_folder.prompt": "📝 새 폴더 이름을 입력하세요:\n{path}",
+  "open.new_folder.invalid":
+    "⚠️ 잘못된 폴더 이름입니다. 경로 구분자 없이 간단한 이름을 사용하세요.",
+  "open.new_folder.exists": "⚠️ 같은 이름의 폴더가 이미 있습니다.",
+  "open.new_folder.error": "🔴 폴더를 만들지 못했습니다.",
+  "sessions.delete_button": "🗑",
+  "sessions.delete_confirm":
+    "🗑 세션 \"{title}\"을(를) 삭제할까요?\n\n이 작업은 되돌릴 수 없습니다.",
+  "sessions.delete_confirm_button": "🗑 삭제",
+  "sessions.deleted": "✅ 세션 삭제됨: {title}",
+  "sessions.deleted_current":
+    "✅ 세션 삭제됨: {title}\n\n삭제된 세션에서 분리되었습니다. 프로젝트는 계속 선택되어 있습니다.",
+  "sessions.delete_error": "🔴 세션을 삭제하지 못했습니다.",
+  "sessions.delete_busy": "⚠️ 실행 중인 세션은 삭제할 수 없습니다. 먼저 중단하세요.",
+  "projects.remove_button": "🗑",
+  "projects.remove_confirm":
+    "🗑 목록에서 프로젝트 \"{project}\"을(를) 제거할까요?\n\n파일은 삭제되지 않습니다. /open으로 다시 추가할 수 있습니다.",
+  "projects.remove_confirm_button": "🗑 제거",
+  "projects.removed": "✅ 목록에서 프로젝트 제거됨: {project}",
+  "projects.remove_error": "🔴 프로젝트를 제거하지 못했습니다.",
+  "projects.remove_current":
+    "⚠️ 활성 프로젝트는 제거할 수 없습니다. 먼저 다른 프로젝트로 전환하세요.",
 };

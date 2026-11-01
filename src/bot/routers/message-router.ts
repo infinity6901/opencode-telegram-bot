@@ -8,6 +8,7 @@ import {
   handleModelSearchTextInput,
 } from "../callbacks/model-selection-callback-handler.js";
 import { handleQuestionTextAnswer } from "../callbacks/question-callback-handler.js";
+import { handleOpenNewFolderTextInput } from "../callbacks/file-browser-callback-handler.js";
 import { handleRenameTextAnswer } from "../callbacks/rename-callback-handler.js";
 import { handleContextButtonPress } from "../menus/context-control-menu.js";
 import { showAgentSelectionMenu } from "../menus/agent-selection-menu.js";
@@ -212,6 +213,11 @@ export function registerMessageRouter(bot: Bot<Context>, deps: MessageRouterDeps
 
     if (container.questionManager.isActive()) {
       await handleQuestionTextAnswer(ctx, container);
+      return;
+    }
+
+    const handledOpenNewFolder = await handleOpenNewFolderTextInput(ctx, container);
+    if (handledOpenNewFolder) {
       return;
     }
 

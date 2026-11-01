@@ -24,6 +24,9 @@ const mocked = vi.hoisted(() => ({
   sessionMessagesMock: vi.fn(),
   sessionStatusMock: vi.fn(),
   sessionMessageMock: vi.fn(),
+  sessionDeleteMock: vi.fn(),
+  getCurrentSessionMock: vi.fn(),
+  clearSessionMock: vi.fn(),
   setCurrentSessionMock: vi.fn(),
   clearInteractionMock: vi.fn(),
   keyboardInitializeMock: vi.fn(),
@@ -34,6 +37,10 @@ const mocked = vi.hoisted(() => ({
   applySessionSettingsMock: vi.fn(),
   pinnedGetStateMock: vi.fn(),
   pinnedOnModelChangeMock: vi.fn(),
+  pinnedIsInitializedMock: vi.fn(() => false),
+  pinnedClearMock: vi.fn(),
+  pinnedRefreshContextLimitMock: vi.fn(),
+  pinnedGetContextLimitMock: vi.fn(() => 0),
   getStoredModelMock: vi.fn(() => ({
     providerID: "opencode-go",
     modelID: "deepseek-v4-flash",
@@ -42,6 +49,9 @@ const mocked = vi.hoisted(() => ({
   keyboardGetContextInfoMock: vi.fn(() => null),
   resolveProjectAgentMock: vi.fn(async () => "build"),
   attachToSessionMock: vi.fn(),
+  detachAttachedSessionMock: vi.fn(),
+  withdrawPromptQueueMock: vi.fn(),
+  clearPromptResponseModeMock: vi.fn(),
   ensureEventSubscriptionMock: vi.fn(),
 }));
 
@@ -55,6 +65,7 @@ vi.mock("../../../src/opencode/client.js", () => ({
       messages: mocked.sessionMessagesMock,
       status: mocked.sessionStatusMock,
       message: mocked.sessionMessageMock,
+      delete: mocked.sessionDeleteMock,
     },
   },
 }));
@@ -65,6 +76,8 @@ vi.mock("../../../src/app/stores/settings-store.js", () => ({
 
 vi.mock("../../../src/app/services/session-service.js", () => ({
   setCurrentSession: mocked.setCurrentSessionMock,
+  getCurrentSession: mocked.getCurrentSessionMock,
+  clearSession: mocked.clearSessionMock,
 }));
 
 vi.mock("../../../src/app/services/agent-selection-service.js", () => ({
@@ -81,6 +94,15 @@ vi.mock("../../../src/app/services/session-settings-service.js", () => ({
 
 vi.mock("../../../src/app/services/attach-service.js", () => ({
   attachToSession: mocked.attachToSessionMock,
+  detachAttachedSession: mocked.detachAttachedSessionMock,
+}));
+
+vi.mock("../../../src/app/services/prompt-inbox-service.js", () => ({
+  withdrawPromptQueue: mocked.withdrawPromptQueueMock,
+}));
+
+vi.mock("../../../src/bot/handlers/prompt.js", () => ({
+  clearPromptResponseMode: mocked.clearPromptResponseModeMock,
 }));
 
 vi.mock("../../../src/utils/safe-background-task.js", () => ({
@@ -193,6 +215,10 @@ function createDeps() {
     pinnedMessageManager: {
       getState: mocked.pinnedGetStateMock,
       onModelChange: mocked.pinnedOnModelChangeMock,
+      isInitialized: mocked.pinnedIsInitializedMock,
+      clear: mocked.pinnedClearMock,
+      refreshContextLimit: mocked.pinnedRefreshContextLimitMock,
+      getContextLimit: mocked.pinnedGetContextLimitMock,
     } as never,
     bot: { api: {} } as Bot<Context>,
   };
@@ -228,7 +254,13 @@ describe("bot/commands/sessions", () => {
     mocked.sessionStatusMock.mockReset();
     mocked.sessionStatusMock.mockResolvedValue({ data: {}, error: null });
     mocked.sessionMessageMock.mockReset();
+    mocked.sessionDeleteMock.mockReset().mockResolvedValue({ data: true, error: null });
+    mocked.getCurrentSessionMock.mockReset();
+    mocked.clearSessionMock.mockReset();
     mocked.setCurrentSessionMock.mockReset();
+    mocked.detachAttachedSessionMock.mockReset();
+    mocked.withdrawPromptQueueMock.mockReset().mockResolvedValue(undefined);
+    mocked.clearPromptResponseModeMock.mockReset();
     mocked.clearInteractionMock.mockReset();
     mocked.keyboardInitializeMock.mockReset();
     mocked.keyboardGetKeyboardMock.mockReset();
@@ -244,6 +276,10 @@ describe("bot/commands/sessions", () => {
     mocked.pinnedGetStateMock.mockReturnValue({ sessionId: null, messageId: null });
     mocked.pinnedOnModelChangeMock.mockReset();
     mocked.pinnedOnModelChangeMock.mockResolvedValue(undefined);
+    mocked.pinnedIsInitializedMock.mockReset().mockReturnValue(false);
+    mocked.pinnedClearMock.mockReset().mockResolvedValue(undefined);
+    mocked.pinnedRefreshContextLimitMock.mockReset().mockResolvedValue(0);
+    mocked.pinnedGetContextLimitMock.mockReset().mockReturnValue(0);
     mocked.resolveProjectAgentMock.mockReset();
     mocked.resolveProjectAgentMock.mockResolvedValue("build");
     mocked.attachToSessionMock.mockReset();
@@ -347,6 +383,141 @@ describe("bot/commands/sessions", () => {
     expect((ctx.api.sendMessage as ReturnType<typeof vi.fn>).mock.calls[1]?.[1]).toBe(
       t("sessions.selected", { title: t("pinned.default_session_title") }),
     );
+  });
+
+  it("shows delete confirmation for a session", async () => {
+    mocked.sessionGetMock.mockResolvedValueOnce({
+      data: createSession(0),
+      error: null,
+    });
+
+    startInteractionForTest(container.interactionManager, {
+      kind: "inline",
+      expectedInput: "callback",
+      metadata: {
+        menuKind: "session",
+        messageId: 456,
+      },
+    });
+
+    const ctx = createCallbackContext("session:delete:session-1", 456);
+    const handled = await handleSessionSelect(ctx, createDeps());
+
+    expect(handled).toBe(true);
+    expect(ctx.answerCallbackQuery).toHaveBeenCalledWith();
+    expect(ctx.editMessageText).toHaveBeenCalledWith(
+      t("sessions.delete_confirm", { title: "Session 1" }),
+      expect.objectContaining({ reply_markup: expect.anything() }),
+    );
+    const [, options] = defined(
+      (ctx.editMessageText as ReturnType<typeof vi.fn>).mock.calls[0],
+    ) as [
+      string,
+      { reply_markup: { inline_keyboard: Array<Array<{ callback_data: string }>> } },
+    ];
+    expect(options.reply_markup.inline_keyboard[0]?.[0]?.callback_data).toBe(
+      "session:delete-confirm:session-1",
+    );
+    expect(options.reply_markup.inline_keyboard[1]?.[0]?.callback_data).toBe(
+      "session:delete-cancel",
+    );
+  });
+
+  it("deletes a non-current session and rerenders the list", async () => {
+    mocked.sessionGetMock.mockResolvedValueOnce({
+      data: createSession(0),
+      error: null,
+    });
+    mocked.sessionListMock.mockResolvedValueOnce({
+      data: [createSession(1)],
+      error: null,
+    });
+
+    startInteractionForTest(container.interactionManager, {
+      kind: "inline",
+      expectedInput: "callback",
+      metadata: {
+        menuKind: "session",
+        messageId: 456,
+      },
+    });
+
+    const ctx = createCallbackContext("session:delete-confirm:session-1", 456);
+    const handled = await handleSessionSelect(ctx, createDeps());
+
+    expect(handled).toBe(true);
+    expect(mocked.sessionDeleteMock).toHaveBeenCalledWith({
+      sessionID: "session-1",
+      directory: "/repo",
+    });
+    expect(ctx.answerCallbackQuery).toHaveBeenCalledWith();
+    expect(ctx.editMessageText).toHaveBeenCalled();
+    expect(mocked.clearSessionMock).not.toHaveBeenCalled();
+    expect(mocked.detachAttachedSessionMock).not.toHaveBeenCalled();
+  });
+
+  it("blocks deletion of a busy session", async () => {
+    mocked.sessionGetMock.mockResolvedValueOnce({
+      data: createSession(0),
+      error: null,
+    });
+    mocked.sessionStatusMock.mockResolvedValueOnce({
+      data: { "session-1": { type: "busy" } },
+      error: null,
+    });
+
+    startInteractionForTest(container.interactionManager, {
+      kind: "inline",
+      expectedInput: "callback",
+      metadata: {
+        menuKind: "session",
+        messageId: 456,
+      },
+    });
+
+    const ctx = createCallbackContext("session:delete-confirm:session-1", 456);
+    const handled = await handleSessionSelect(ctx, createDeps());
+
+    expect(handled).toBe(true);
+    expect(mocked.sessionDeleteMock).not.toHaveBeenCalled();
+    expect(ctx.answerCallbackQuery).toHaveBeenCalledWith({
+      text: t("sessions.delete_busy"),
+      show_alert: true,
+    });
+  });
+
+  it("deletes the current session and resets runtime state", async () => {
+    mocked.sessionGetMock.mockResolvedValueOnce({
+      data: createSession(0),
+      error: null,
+    });
+    mocked.getCurrentSessionMock.mockReturnValue(createSession(0));
+
+    startInteractionForTest(container.interactionManager, {
+      kind: "inline",
+      expectedInput: "callback",
+      metadata: {
+        menuKind: "session",
+        messageId: 456,
+      },
+    });
+
+    const ctx = createCallbackContext("session:delete-confirm:session-1", 456);
+    const handled = await handleSessionSelect(ctx, createDeps());
+
+    expect(handled).toBe(true);
+    expect(mocked.withdrawPromptQueueMock).toHaveBeenCalledWith("session_deleted");
+    expect(mocked.clearPromptResponseModeMock).toHaveBeenCalledWith("session-1");
+    expect(mocked.detachAttachedSessionMock).toHaveBeenCalledWith(
+      "session_deleted",
+      expect.any(Object),
+    );
+    expect(mocked.clearSessionMock).toHaveBeenCalled();
+    expect(ctx.reply).toHaveBeenCalledWith(
+      t("sessions.deleted_current", { title: "Session 1" }),
+      expect.any(Object),
+    );
+    expect(ctx.deleteMessage).toHaveBeenCalled();
   });
 
   it("blocks sessions command while foreground session is busy", async () => {

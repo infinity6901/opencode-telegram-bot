@@ -9,6 +9,7 @@ import type {
   InteractionKind,
 } from "../../app/types/interaction.js";
 import { QUEUED_PROMPT_BUTTON_TEXT_PATTERN } from "../message-patterns.js";
+import { OPEN_CALLBACK_NEW_FOLDER_CANCEL } from "../menus/file-browser-menu.js";
 import type { LocalCommandRegistry } from "../../app/services/local-command-registry.js";
 import { isKnownCommand } from "../routers/command-utils.js";
 
@@ -161,6 +162,18 @@ function isAllowedTaskCallback(ctx: Context, state: InteractionState): boolean {
   );
 }
 
+function isAllowedOpenNewFolderCancelCallback(
+  ctx: Context,
+  state: InteractionState,
+): boolean {
+  return (
+    state.kind === "custom" &&
+    state.expectedInput === "text" &&
+    state.metadata.action === "open_new_folder" &&
+    ctx.callbackQuery?.data === OPEN_CALLBACK_NEW_FOLDER_CANCEL
+  );
+}
+
 export function resolveInteractionGuardDecision(
   ctx: Context,
   deps: InteractionGuardDecisionDeps,
@@ -189,6 +202,10 @@ export function resolveInteractionGuardDecision(
       }
 
       return createBusyBlockDecision(inputType, state, "command_not_allowed", command);
+    }
+
+    if (inputType === "callback" && state && isAllowedOpenNewFolderCancelCallback(ctx, state)) {
+      return createAllowDecision(inputType, state, command, true);
     }
 
     if (state && allowsBusyInteraction(state.kind)) {
@@ -248,6 +265,10 @@ export function resolveInteractionGuardDecision(
   }
 
   if (inputType === "callback" && isAllowedTaskCallback(ctx, state)) {
+    return createAllowDecision(inputType, state, command);
+  }
+
+  if (inputType === "callback" && isAllowedOpenNewFolderCancelCallback(ctx, state)) {
     return createAllowDecision(inputType, state, command);
   }
 
